@@ -15,10 +15,29 @@
   .filter-card .filter-toggle { white-space:nowrap; }
   .filter-grid { align-items:end; }
   .range-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .form-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-  .address-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .form-grid-2,
+  .address-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:start; }
+  .form-grid-2 .form-group,
+  .address-grid-2 .form-group,
+  .range-grid .form-input { min-width:0; }
+  .form-grid-2 .form-input,
+  .address-grid-2 .form-input,
+  .range-grid .form-input { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+  .form-grid-2 input[type="date"] { font-size:16px; padding-left:10px; padding-right:8px; text-align:left; }
+  .map-card { margin-top:16px; }
+  .station-map-frame { width:100%; height:280px; border:0; border-radius:16px; background:rgba(0,0,0,0.04); }
+  .station-map-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .station-chip { border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.72); border-radius:999px; padding:8px 10px; font:inherit; font-size:13px; cursor:pointer; }
+  .station-chip.active { background:#e8c840; color:#171717; border-color:#e8c840; }
   @media (max-width:640px) {
-    .range-grid, .form-grid-2, .address-grid-2 { grid-template-columns:1fr; }
+    .range-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .form-grid-2,
+    .address-grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .form-grid-2 .form-label,
+    .address-grid-2 .form-label { font-size:13px; line-height:1.2; }
+    .form-grid-2 .form-input,
+    .address-grid-2 .form-input { font-size:16px; padding-left:10px; padding-right:8px; }
+    .station-map-frame { height:240px; }
   }
 </style>
 
@@ -108,6 +127,11 @@
           <div class="section-title">Gallons by brand</div>
           <div class="chart-wrap-sm"><canvas id="chart-brands"></canvas></div>
         </div>
+      </div>
+      <div class="chart-card map-card">
+        <div class="section-title">Station map</div>
+        <iframe id="station-map" class="station-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <div class="station-map-list" id="station-map-list"></div>
       </div>
     </div>
 
@@ -218,6 +242,7 @@ let entries = loadLocalEntries();
 let chartSpending;
 let chartPPG;
 let chartBrands;
+let selectedMapStation = "";
 let editingId = null;
 
 function loadLocalEntries() {
@@ -575,6 +600,7 @@ function renderAll() {
   renderMetrics();
   renderHistory();
   renderCharts();
+  renderStationMap();
 }
 
 function uniqueByRecent(key) {
@@ -777,6 +803,50 @@ function groupByTime(data) {
   }));
 }
 
+
+function stationMapQuery(e) {
+  const address = fullAddress(e);
+  return [e.station, e.brand, address].filter(Boolean).join(', ');
+}
+
+function setMapStation(station) {
+  selectedMapStation = station;
+  renderStationMap();
+}
+
+function renderStationMap() {
+  const iframe = document.getElementById('station-map');
+  const list = document.getElementById('station-map-list');
+  if (!iframe || !list) return;
+
+  const data = getFilteredEntries().filter(e => e.station || fullAddress(e));
+  if (!data.length) {
+    iframe.removeAttribute('src');
+    list.innerHTML = '<span class="metric-sub">Add a station address to see it on the map.</span>';
+    return;
+  }
+
+  const uniqueStations = [];
+  const seen = new Set();
+  [...data].sort(sortNewest).forEach(e => {
+    const key = e.station || fullAddress(e);
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueStations.push(e);
+    }
+  });
+
+  const selected = uniqueStations.find(e => e.station === selectedMapStation) || uniqueStations[0];
+  selectedMapStation = selected.station;
+  iframe.src = `https://www.google.com/maps?q=${encodeURIComponent(stationMapQuery(selected))}&output=embed`;
+
+  list.innerHTML = uniqueStations.map(e => `
+    <button class="station-chip ${e.station === selectedMapStation ? 'active' : ''}" type="button" onclick="setMapStation('${escapeJs(e.station)}')">
+      ${escapeHtml(e.station || e.brand || 'Station')}
+    </button>
+  `).join('');
+}
+
 function renderCharts() {
   if (chartSpending) chartSpending.destroy();
   if (chartPPG) chartPPG.destroy();
@@ -831,6 +901,15 @@ function renderCharts() {
     data: { labels: brandLabels, datasets: [{ data: brandData, backgroundColor: brandLabels.map((_, i) => palette[i % palette.length]), borderWidth: 2, borderColor: dark ? '#1c1c1f' : '#fff' }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: tick, font: { size: 11 }, boxWidth: 10, padding: 8 } } } }
   });
+}
+
+
+function escapeJs(value) {
+  return String(value ?? '')
+    .replaceAll('\\', '\\\\')
+    .replaceAll("'", "\\'")
+    .replaceAll('\n', ' ')
+    .replaceAll('\r', ' ');
 }
 
 function escapeHtml(value) {
