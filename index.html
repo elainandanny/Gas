@@ -5,33 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Gas Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f9f8f4;
-    --surface: #ffffff;
-    --surface2: #f2f1ec;
-    --border: rgba(0,0,0,0.1);
-    --text: #1a1a1a;
-    --muted: #666;
-    --hint: #999;
-    --accent: #e8c840;
-    --accent-dark: #1a1a2e;
-    --success: #2eab6f;
-    --danger: #e24b4a;
-    --radius: 10px;
-    --radius-lg: 14px;
+    --bg: #f9f8f4; --surface: #ffffff; --surface2: #f2f1ec; --border: rgba(0,0,0,0.1);
+    --text: #1a1a1a; --muted: #666; --hint: #999; --accent: #e8c840; --accent-dark: #1a1a2e;
+    --success: #2eab6f; --danger: #e24b4a; --radius: 10px; --radius-lg: 14px;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #111113;
-      --surface: #1c1c1f;
-      --surface2: #26262a;
-      --border: rgba(255,255,255,0.1);
-      --text: #f0efea;
-      --muted: #999;
-      --hint: #666;
-    }
+    :root { --bg: #111113; --surface: #1c1c1f; --surface2: #26262a; --border: rgba(255,255,255,0.1); --text: #f0efea; --muted: #999; --hint: #666; }
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   .app { max-width: 760px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
@@ -41,24 +25,10 @@
   .logo svg { width: 22px; height: 22px; fill: var(--accent); }
   .app-title { font-size: 20px; font-weight: 600; }
   .app-sub { font-size: 12px; color: var(--muted); }
-  .key-btn, .export-btn { padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
-  .key-btn:hover, .export-btn:hover { color: var(--text); border-color: var(--accent); }
+  .export-btn { padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .export-btn:hover { color: var(--text); border-color: var(--accent); }
   .top-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-  .modal-overlay.hidden { display: none; }
-  .modal { background: var(--surface); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 460px; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
-  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
-  .modal-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); color: var(--text); font-size: 14px; font-family: monospace; margin-bottom: 12px; }
-  .modal-input:focus { outline: none; border-color: var(--accent); }
-  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
-  .btn { padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); }
-  .btn:hover { background: var(--border); }
-  .btn-primary { background: var(--accent); color: var(--accent-dark); border-color: var(--accent); }
-  .btn-primary:hover { opacity: 0.9; }
-  .key-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 8px; border-radius: 20px; }
-  .key-status.set { background: rgba(46,171,111,0.12); color: var(--success); }
-  .key-status.missing { background: rgba(226,75,74,0.12); color: var(--danger); }
+  #import-input, #photo-input { display: none; }
   .tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; background: var(--surface2); border-radius: var(--radius); padding: 3px; }
   .tab { flex: 1; padding: 8px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; background: none; border-radius: 8px; transition: all 0.15s; }
   .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
@@ -70,28 +40,22 @@
   .metric-value { font-size: 22px; font-weight: 600; }
   .metric-sub { font-size: 11px; color: var(--hint); margin-top: 3px; }
   .section-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
-  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .chart-card, .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
   .chart-wrap { position: relative; width: 100%; height: 220px; }
   .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .chart-wrap-sm { position: relative; width: 100%; height: 180px; }
-  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
   .photo-zone { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.15s; margin-bottom: 1rem; }
   .photo-zone:hover { border-color: var(--accent); background: rgba(232,200,64,0.04); }
   .photo-icon { font-size: 28px; margin-bottom: 6px; }
   .photo-zone-text { font-size: 13px; color: var(--muted); }
   .photo-zone-hint { font-size: 11px; color: var(--hint); margin-top: 3px; }
-  #photo-input, #import-input { display: none; }
   .photo-preview { max-width: 100%; max-height: 140px; border-radius: 6px; margin-bottom: 8px; }
   .analyzing { font-size: 12px; color: var(--muted); font-style: italic; display: flex; align-items: center; gap: 6px; }
   .spinner { width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  @media (max-width: 560px) {
-    .header { align-items:flex-start; }
-    .form-row, .form-row-3, .chart-grid { grid-template-columns: 1fr; }
-    .top-actions { flex-direction:column; align-items:flex-end; }
-  }
+  @media (max-width: 560px) { .header { align-items:flex-start; } .form-row, .form-row-3, .chart-grid { grid-template-columns: 1fr; } .top-actions { flex-direction:column; align-items:flex-end; } }
   .form-group { display: flex; flex-direction: column; gap: 5px; }
   .form-label { font-size: 12px; color: var(--muted); font-weight: 500; }
   .form-input { padding: 9px 11px; font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); color: var(--text); font-family: inherit; transition: border-color 0.15s; }
@@ -108,58 +72,22 @@
   .del-btn { background: none; border: none; cursor: pointer; color: var(--hint); font-size: 15px; padding: 2px 6px; border-radius: 4px; line-height: 1; }
   .del-btn:hover { background: rgba(226,75,74,0.1); color: var(--danger); }
   .empty { text-align: center; padding: 2.5rem; color: var(--muted); font-size: 14px; }
-  .chat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-  .chat-messages { padding: 1.25rem; min-height: 100px; max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-  .msg { padding: 10px 14px; border-radius: var(--radius); font-size: 14px; line-height: 1.55; max-width: 88%; white-space: pre-wrap; }
-  .msg-user { background: var(--accent); color: var(--accent-dark); align-self: flex-end; font-weight: 500; }
-  .msg-ai { background: var(--surface2); color: var(--text); align-self: flex-start; }
-  .msg-loading { opacity: 0.6; font-style: italic; }
-  .chat-input-area { border-top: 1px solid var(--border); padding: 12px; display: flex; gap: 8px; background: var(--surface); }
-  .chat-input { flex: 1; padding: 9px 12px; font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); color: var(--text); font-family: inherit; }
-  .chat-input:focus { outline: none; border-color: var(--accent); }
-  .chat-send { padding: 9px 16px; background: var(--accent-dark); color: var(--accent); border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-  .chat-send:hover { opacity: 0.85; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .chip { padding: 5px 11px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--muted); cursor: pointer; }
-  .chip:hover { border-color: var(--accent); color: var(--text); }
   .banner { border-radius: var(--radius); padding: 10px 14px; font-size: 13px; margin-bottom: 1rem; line-height: 1.45; }
-  .no-key-banner { background: rgba(226,75,74,0.08); border: 1px solid rgba(226,75,74,0.2); color: var(--danger); }
   .info-banner { background: rgba(46,171,111,0.08); border: 1px solid rgba(46,171,111,0.2); color: var(--success); }
+  .ocr-box { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.4; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-top: 10px; max-height: 160px; overflow: auto; display: none; }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="header">
     <div class="header-left">
-      <div class="logo">
-        <svg viewBox="0 0 24 24"><path d="M17 5H3C1.9 5 1 5.9 1 7v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-7 11H4v-2h6v2zm0-4H4v-2h6v2zm0-4H4V6h6v2zm8 2-2-2V5h-2v3l2 2v7.5c0 .83-.67 1.5-1.5 1.5S13 18.33 13 17.5V13H7v-2h8v3h.5c.83 0 1.5.67 1.5 1.5V18c0 2.21-1.79 4-4 4s-4-1.79-4-4v-1h2v1c0 1.1.9 2 2 2s2-.9 2-2v-3.5L18 10z"/></svg>
-      </div>
-      <div>
-        <div class="app-title">Gas Tracker</div>
-        <div class="app-sub">Log fill-ups · visualize trends · ask AI</div>
-      </div>
+      <div class="logo"><svg viewBox="0 0 24 24"><path d="M17 5H3C1.9 5 1 5.9 1 7v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-7 11H4v-2h6v2zm0-4H4v-2h6v2zm0-4H4V6h6v2zm8 2-2-2V5h-2v3l2 2v7.5c0 .83-.67 1.5-1.5 1.5S13 18.33 13 17.5V13H7v-2h8v3h.5c.83 0 1.5.67 1.5 1.5V18c0 2.21-1.79 4-4 4s-4-1.79-4-4v-1h2v1c0 1.1.9 2 2 2s2-.9 2-2v-3.5L18 10z"/></svg></div>
+      <div><div class="app-title">Gas Tracker</div><div class="app-sub">Log fill-ups · scan receipts · visualize trends</div></div>
     </div>
     <div class="top-actions">
-      <span id="key-status" class="key-status missing">● No API key</span>
-      <button class="key-btn" onclick="openKeyModal()">⚙ API Key</button>
       <button class="export-btn" onclick="exportData()">Export</button>
       <button class="export-btn" onclick="document.getElementById('import-input').click()">Import</button>
       <input type="file" id="import-input" accept="application/json" onchange="importData(this)" />
-    </div>
-  </div>
-
-  <div class="modal-overlay hidden" id="key-modal">
-    <div class="modal">
-      <div class="modal-title">OpenAI API Key</div>
-      <div class="modal-sub">
-        Because you are the only user right now, this version stores your OpenAI API key in this browser's localStorage. Do not publish this with your actual key hardcoded into the file.
-      </div>
-      <input class="modal-input" type="password" id="key-input" placeholder="sk-proj-..." />
-      <div class="modal-actions">
-        <button class="btn" onclick="closeKeyModal()">Cancel</button>
-        <button class="btn" onclick="clearKey()" style="color:var(--danger);">Clear</button>
-        <button class="btn btn-primary" onclick="saveKey()">Save key</button>
-      </div>
     </div>
   </div>
 
@@ -167,536 +95,342 @@
     <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
     <button class="tab" onclick="switchTab('log')">Add Fill-Up</button>
     <button class="tab" onclick="switchTab('history')">History</button>
-    <button class="tab" onclick="switchTab('ask')">Ask AI</button>
   </div>
 
   <div id="tab-dashboard" class="panel active">
-    <div class="banner info-banner">Your entries are saved automatically in this browser, so they stay after closing and reopening the site. Use Export/Import to back up or move your data.</div>
+    <div class="banner info-banner" id="sync-banner">No API key needed. Receipt scanning uses Tesseract.js OCR in your browser. Entries save to Supabase when configured; otherwise they save locally.</div>
     <div class="metrics" id="metrics-row"></div>
-    <div class="chart-card">
-      <div class="section-title">Total spending per fill-up</div>
-      <div class="chart-wrap"><canvas id="chart-spending" role="img" aria-label="Spending per fill-up over time"></canvas></div>
-    </div>
+    <div class="chart-card"><div class="section-title">Total spending per fill-up</div><div class="chart-wrap"><canvas id="chart-spending"></canvas></div></div>
     <div class="chart-grid">
-      <div class="chart-card">
-        <div class="section-title">Price per gallon</div>
-        <div class="chart-wrap-sm"><canvas id="chart-ppg" role="img" aria-label="Price per gallon trend"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="section-title">Gallons by station</div>
-        <div class="chart-wrap-sm"><canvas id="chart-stations" role="img" aria-label="Gallons by station"></canvas></div>
-      </div>
+      <div class="chart-card"><div class="section-title">Price per gallon</div><div class="chart-wrap-sm"><canvas id="chart-ppg"></canvas></div></div>
+      <div class="chart-card"><div class="section-title">Gallons by station</div><div class="chart-wrap-sm"><canvas id="chart-stations"></canvas></div></div>
     </div>
   </div>
 
   <div id="tab-log" class="panel">
     <div class="form-card">
-      <div class="section-title" style="margin-bottom:12px;">Scan receipt with AI</div>
-      <div id="no-key-photo" class="banner no-key-banner" style="display:none;">Set your OpenAI API key above to use photo scanning.</div>
-      <div class="photo-zone" onclick="document.getElementById('photo-input').click()" id="photo-zone">
+      <div class="section-title" style="margin-bottom:12px;">Scan receipt with OCR</div>
+      <div class="photo-zone" onclick="document.getElementById('photo-input').click()">
         <div id="photo-preview-area"></div>
         <div class="photo-icon">📷</div>
         <div class="photo-zone-text">Tap to take a photo or upload a receipt</div>
-        <div class="photo-zone-hint">AI will auto-fill the form below</div>
+        <div class="photo-zone-hint">OCR will auto-fill the form below. Review before saving.</div>
       </div>
       <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)" />
-      <div id="analyzing-msg" style="display:none;" class="analyzing"><div class="spinner"></div> Analyzing receipt with AI…</div>
+      <div id="analyzing-msg" style="display:none;" class="analyzing"><div class="spinner"></div> <span id="ocr-status">Reading receipt…</span></div>
+      <div id="ocr-text" class="ocr-box"></div>
     </div>
 
     <div class="form-card">
       <div class="section-title" style="margin-bottom:14px;">Fill-up details</div>
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Gas station</label>
-          <input class="form-input" id="f-station" placeholder="e.g. Shell, Costco" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Date</label>
-          <input class="form-input" type="date" id="f-date" />
-        </div>
+        <div class="form-group"><label class="form-label">Gas station</label><input class="form-input" id="f-station" placeholder="e.g. Shell, Costco" /></div>
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="f-date" /></div>
       </div>
       <div class="form-row-3">
-        <div class="form-group">
-          <label class="form-label">Price / gallon ($)</label>
-          <input class="form-input" type="number" step="0.001" id="f-ppg" placeholder="3.499" oninput="calcTotal()" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Gallons</label>
-          <input class="form-input" type="number" step="0.001" id="f-gallons" placeholder="12.500" oninput="calcTotal()" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Total ($)</label>
-          <input class="form-input" type="number" step="0.01" id="f-total" placeholder="43.74" />
-        </div>
+        <div class="form-group"><label class="form-label">Price / gallon ($)</label><input class="form-input" type="number" step="0.001" id="f-ppg" placeholder="3.499" oninput="calcTotal()" /></div>
+        <div class="form-group"><label class="form-label">Gallons</label><input class="form-input" type="number" step="0.001" id="f-gallons" placeholder="12.500" oninput="calcTotal()" /></div>
+        <div class="form-group"><label class="form-label">Total ($)</label><input class="form-input" type="number" step="0.01" id="f-total" placeholder="43.74" /></div>
       </div>
-      <div style="display:flex;align-items:center;">
-        <button class="save-btn" onclick="addEntry()">Save fill-up</button>
-        <span class="save-msg" id="save-msg"></span>
-      </div>
+      <div style="display:flex;align-items:center;"><button class="save-btn" onclick="addEntry()">Save fill-up</button><span class="save-msg" id="save-msg"></span></div>
     </div>
   </div>
 
   <div id="tab-history" class="panel">
     <div class="table-wrap">
-      <table>
-        <thead><tr><th>Date</th><th>Station</th><th>$/gal</th><th>Gallons</th><th>Total</th><th></th></tr></thead>
-        <tbody id="history-body"></tbody>
-      </table>
+      <table><thead><tr><th>Date</th><th>Station</th><th>$/gal</th><th>Gallons</th><th>Total</th><th></th></tr></thead><tbody id="history-body"></tbody></table>
       <div id="history-empty" class="empty" style="display:none;">No fill-ups yet — add your first one!</div>
-    </div>
-  </div>
-
-  <div id="tab-ask" class="panel">
-    <div id="no-key-ask" class="banner no-key-banner" style="display:none;">Set your OpenAI API key above to use the AI assistant.</div>
-    <div class="chips" id="chips"></div>
-    <div class="chat-card">
-      <div class="chat-messages" id="chat-messages">
-        <div class="msg msg-ai">Hi! Ask me anything about your gas data — spending trends, cheapest stations, monthly totals, or price comparisons.</div>
-      </div>
-      <div class="chat-input-area">
-        <input class="chat-input" id="chat-input" placeholder="e.g. Which station is cheapest?" onkeydown="if(event.key==='Enter')sendQuestion()" />
-        <button class="chat-send" onclick="sendQuestion()">Ask →</button>
-      </div>
     </div>
   </div>
 </div>
 
 <script>
-const STORAGE_KEY = 'gas-tracker-entries-v2';
-const API_KEY_STORAGE_KEY = 'openai-key';
+const STORAGE_KEY = 'gas-tracker-entries-v3';
+
+// Replace these with your Supabase values:
+// Supabase Dashboard -> Project Settings -> API
+const SUPABASE_URL = 'https://ykedfxitevfpioplirdy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZWRmeGl0ZXZmcGlvcGxpcmR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjQ4ODIsImV4cCI6MjA5MzA0MDg4Mn0.EmfBzmig_fkITR2Uw5MPxkjvFTzwlevkTzbUCKgwI5o';
+
+const supabaseReady =
+  !SUPABASE_URL.includes('PASTE_') &&
+  !SUPABASE_ANON_KEY.includes('PASTE_') &&
+  window.supabase;
+
+const supabaseClient = supabaseReady
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
 let entries = loadEntries();
 let chartSpending, chartPPG, chartStations;
 
 function loadEntries() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('gas-entries') || '[]';
+    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('gas-tracker-entries-v2') || localStorage.getItem('gas-entries') || '[]';
     const parsed = JSON.parse(saved);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(normalizeEntry).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
-  } catch {
-    return [];
-  }
+    return Array.isArray(parsed) ? parsed.map(normalizeEntry).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date)) : [];
+  } catch { return []; }
 }
-
 function normalizeEntry(e) {
-  if (!e) return null;
-  const station = String(e.station || '').trim();
-  const date = String(e.date || '').trim();
-  const ppg = Number(e.ppg);
-  const gallons = Number(e.gallons);
-  const total = Number(e.total);
+  const station = String(e?.station || '').trim();
+  const date = String(e?.date || '').trim();
+  const ppg = Number(e?.ppg), gallons = Number(e?.gallons), total = Number(e?.total);
   if (!station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) return null;
   return { id: e.id || Date.now() + Math.random(), station, date, ppg, gallons, total };
 }
+function saveEntries() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
 
-function saveEntries() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+async function loadEntriesFromCloud() {
+  if (!supabaseClient) {
+    renderAll();
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('gas_entries')
+      .select('*')
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    entries = (data || []).map(normalizeEntry).filter(Boolean);
+    saveEntries();
+    renderAll();
+  } catch (err) {
+    console.error('Supabase load failed:', err);
+    alert('Could not load from Supabase. Showing local data instead. Check your Supabase URL, anon key, table, and policies.');
+    renderAll();
+  }
 }
 
-function getKey() { return localStorage.getItem(API_KEY_STORAGE_KEY) || ''; }
-function openKeyModal() {
-  document.getElementById('key-input').value = getKey();
-  document.getElementById('key-modal').classList.remove('hidden');
+async function saveEntryToCloud(entry) {
+  if (!supabaseClient) return false;
+  const { error } = await supabaseClient.from('gas_entries').insert({
+    station: entry.station,
+    date: entry.date,
+    ppg: entry.ppg,
+    gallons: entry.gallons,
+    total: entry.total
+  });
+  if (error) throw error;
+  return true;
 }
-function closeKeyModal() { document.getElementById('key-modal').classList.add('hidden'); }
-function saveKey() {
-  const key = document.getElementById('key-input').value.trim();
-  if (key) localStorage.setItem(API_KEY_STORAGE_KEY, key);
-  else localStorage.removeItem(API_KEY_STORAGE_KEY);
-  closeKeyModal();
-  updateKeyStatus();
-}
-function clearKey() {
-  localStorage.removeItem(API_KEY_STORAGE_KEY);
-  document.getElementById('key-input').value = '';
-  closeKeyModal();
-  updateKeyStatus();
-}
-function updateKeyStatus() {
-  const el = document.getElementById('key-status');
-  const has = Boolean(getKey());
-  el.textContent = has ? '● API key saved' : '● No API key';
-  el.className = 'key-status ' + (has ? 'set' : 'missing');
-  document.getElementById('no-key-photo').style.display = has ? 'none' : 'block';
-  document.getElementById('no-key-ask').style.display = has ? 'none' : 'block';
+
+async function deleteEntryFromCloud(id) {
+  if (!supabaseClient) return false;
+  const { error } = await supabaseClient.from('gas_entries').delete().eq('id', id);
+  if (error) throw error;
+  return true;
 }
 
 function switchTab(name) {
-  const names = ['dashboard','log','history','ask'];
+  const names = ['dashboard','log','history'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'dashboard') renderCharts();
 }
-
 function calcTotal() {
   const p = parseFloat(document.getElementById('f-ppg').value);
   const g = parseFloat(document.getElementById('f-gallons').value);
-  if (!Number.isNaN(p) && !Number.isNaN(g)) {
-    document.getElementById('f-total').value = (p * g).toFixed(2);
-  }
+  if (!Number.isNaN(p) && !Number.isNaN(g)) document.getElementById('f-total').value = (p * g).toFixed(2);
 }
-
-function addEntry() {
+async function addEntry() {
   const station = document.getElementById('f-station').value.trim();
   const date = document.getElementById('f-date').value;
   const ppg = parseFloat(document.getElementById('f-ppg').value);
   const gallons = parseFloat(document.getElementById('f-gallons').value);
   const total = parseFloat(document.getElementById('f-total').value);
+  if (!station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) { showMsg('Please fill in all fields.', true); return; }
 
-  if (!station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) {
-    showMsg('Please fill in all fields.', true);
-    return;
+  const entry = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), station, date, ppg, gallons, total };
+
+  try {
+    if (supabaseClient) {
+      await saveEntryToCloud(entry);
+      await loadEntriesFromCloud();
+      showMsg('Saved to Supabase!');
+    } else {
+      entries.unshift(entry);
+      entries.sort((a,b) => b.date.localeCompare(a.date));
+      saveEntries(); renderAll();
+      showMsg('Saved locally. Add Supabase keys to sync across devices.');
+    }
+    ['f-station','f-ppg','f-gallons','f-total'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  } catch (err) {
+    console.error('Save failed:', err);
+    showMsg('Could not save to Supabase.', true);
   }
-
-  entries.unshift({ id: Date.now(), station, date, ppg, gallons, total });
-  entries.sort((a,b) => b.date.localeCompare(a.date));
-  saveEntries();
-  renderAll();
-  ['f-station','f-ppg','f-gallons','f-total'].forEach(id => document.getElementById(id).value = '');
-  showMsg('Saved!');
 }
-
 function showMsg(msg, err = false) {
-  const el = document.getElementById('save-msg');
-  el.textContent = msg;
-  el.style.color = err ? 'var(--danger)' : 'var(--success)';
+  const el = document.getElementById('save-msg'); el.textContent = msg; el.style.color = err ? 'var(--danger)' : 'var(--success)';
   setTimeout(() => { el.textContent = ''; }, 2500);
 }
-
-function deleteEntry(id) {
+async function deleteEntry(id) {
   if (!confirm('Delete this fill-up?')) return;
-  entries = entries.filter(e => String(e.id) !== String(id));
-  saveEntries();
-  renderAll();
-}
 
-function renderAll() {
-  renderMetrics();
-  renderHistory();
-  renderCharts();
+  try {
+    if (supabaseClient) {
+      await deleteEntryFromCloud(id);
+      await loadEntriesFromCloud();
+    } else {
+      entries = entries.filter(e => String(e.id) !== String(id));
+      saveEntries();
+      renderAll();
+    }
+  } catch (err) {
+    console.error('Delete failed:', err);
+    alert('Could not delete from Supabase. Check your table policies.');
+  }
 }
-
+function renderAll() { renderMetrics(); renderHistory(); renderCharts(); }
 function renderMetrics() {
   const el = document.getElementById('metrics-row');
-  if (!entries.length) {
-    el.innerHTML = '<div class="metric"><div class="metric-label">No data yet</div><div class="metric-value" style="font-size:15px;">Add your first fill-up</div></div>';
-    return;
-  }
+  if (!entries.length) { el.innerHTML = '<div class="metric"><div class="metric-label">No data yet</div><div class="metric-value" style="font-size:15px;">Add your first fill-up</div></div>'; return; }
   const totalSpend = entries.reduce((s,e) => s + e.total, 0);
   const avgPPG = entries.reduce((s,e) => s + e.ppg, 0) / entries.length;
   const totalGal = entries.reduce((s,e) => s + e.gallons, 0);
-  const fills = entries.length;
   const last = [...entries].sort((a,b) => b.date.localeCompare(a.date))[0];
   el.innerHTML = `
-    <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${fills} fill-up${fills !== 1 ? 's' : ''}</div></div>
+    <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${entries.length} fill-up${entries.length !== 1 ? 's' : ''}</div></div>
     <div class="metric"><div class="metric-label">Avg price / gal</div><div class="metric-value">$${avgPPG.toFixed(3)}</div></div>
     <div class="metric"><div class="metric-label">Total gallons</div><div class="metric-value">${totalGal.toFixed(1)}</div></div>
-    <div class="metric"><div class="metric-label">Last fill-up</div><div class="metric-value" style="font-size:15px;">${escapeHtml(last.station)}</div><div class="metric-sub">${last.date}</div></div>
-  `;
+    <div class="metric"><div class="metric-label">Last fill-up</div><div class="metric-value" style="font-size:15px;">${escapeHtml(last.station)}</div><div class="metric-sub">${last.date}</div></div>`;
 }
-
 function renderHistory() {
-  const tbody = document.getElementById('history-body');
-  const empty = document.getElementById('history-empty');
-  if (!entries.length) {
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
+  const tbody = document.getElementById('history-body'), empty = document.getElementById('history-empty');
+  if (!entries.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
-  tbody.innerHTML = entries.map(e => `
-    <tr>
-      <td>${escapeHtml(e.date)}</td>
-      <td>${escapeHtml(e.station)}</td>
-      <td>$${e.ppg.toFixed(3)}</td>
-      <td>${e.gallons.toFixed(3)}</td>
-      <td>$${e.total.toFixed(2)}</td>
-      <td><button class="del-btn" onclick="deleteEntry('${e.id}')">✕</button></td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = entries.map(e => `<tr><td>${escapeHtml(e.date)}</td><td>${escapeHtml(e.station)}</td><td>$${e.ppg.toFixed(3)}</td><td>${e.gallons.toFixed(3)}</td><td>$${e.total.toFixed(2)}</td><td><button class="del-btn" onclick="deleteEntry('${e.id}')">✕</button></td></tr>`).join('');
 }
-
 function renderCharts() {
-  const spendingCanvas = document.getElementById('chart-spending');
-  const ppgCanvas = document.getElementById('chart-ppg');
-  const stationsCanvas = document.getElementById('chart-stations');
-
-  if (chartSpending) chartSpending.destroy();
-  if (chartPPG) chartPPG.destroy();
-  if (chartStations) chartStations.destroy();
-
+  if (chartSpending) chartSpending.destroy(); if (chartPPG) chartPPG.destroy(); if (chartStations) chartStations.destroy();
   if (!entries.length) return;
-
   const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
   const labels = sorted.map(e => e.date.slice(5));
   const totals = sorted.map(e => Number(e.total.toFixed(2)));
   const ppgs = sorted.map(e => Number(e.ppg.toFixed(3)));
-
-  const stationMap = {};
-  entries.forEach(e => { stationMap[e.station] = (stationMap[e.station] || 0) + e.gallons; });
-  const stationLabels = Object.keys(stationMap);
-  const stationData = stationLabels.map(k => Number(stationMap[k].toFixed(2)));
-
-  const dark = matchMedia('(prefers-color-scheme:dark)').matches;
-  const grid = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const tick = dark ? '#999' : '#777';
-  const border = dark ? '#1c1c1f' : '#fff';
+  const stationMap = {}; entries.forEach(e => { stationMap[e.station] = (stationMap[e.station] || 0) + e.gallons; });
+  const stationLabels = Object.keys(stationMap), stationData = stationLabels.map(k => Number(stationMap[k].toFixed(2)));
+  const dark = matchMedia('(prefers-color-scheme:dark)').matches, grid = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', tick = dark ? '#999' : '#777';
+  const base = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:grid},ticks:{color:tick,font:{size:11},autoSkip:true,maxTicksLimit:8}}, y:{grid:{color:grid},ticks:{color:tick,font:{size:11}},beginAtZero:false} } };
+  chartSpending = new Chart(document.getElementById('chart-spending'), { type:'bar', data:{labels,datasets:[{data:totals,backgroundColor:'rgba(232,200,64,0.75)',borderColor:'#e8c840',borderWidth:1}]}, options:{...base,scales:{...base.scales,y:{...base.scales.y,ticks:{...base.scales.y.ticks,callback:v=>'$'+v}}}} });
+  chartPPG = new Chart(document.getElementById('chart-ppg'), { type:'line', data:{labels,datasets:[{data:ppgs,borderColor:'#e8c840',backgroundColor:'rgba(232,200,64,0.1)',tension:0.3,pointRadius:4,fill:true}]}, options:{...base,scales:{...base.scales,y:{...base.scales.y,ticks:{...base.scales.y.ticks,callback:v=>'$'+Number(v).toFixed(2)}}}} });
   const palette = ['#e8c840','#1a6eb5','#e05a2b','#2eab6f','#9b5de5','#f4845f'];
-
-  const base = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: grid }, ticks: { color: tick, font: { size: 11 }, autoSkip: true, maxTicksLimit: 8 } },
-      y: { grid: { color: grid }, ticks: { color: tick, font: { size: 11 } }, beginAtZero: false }
-    }
-  };
-
-  chartSpending = new Chart(spendingCanvas, {
-    type: 'bar',
-    data: { labels, datasets: [{ data: totals, backgroundColor: 'rgba(232,200,64,0.75)', borderColor: '#e8c840', borderWidth: 1 }] },
-    options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => '$' + v } } } }
-  });
-
-  chartPPG = new Chart(ppgCanvas, {
-    type: 'line',
-    data: { labels, datasets: [{ data: ppgs, borderColor: '#e8c840', backgroundColor: 'rgba(232,200,64,0.1)', tension: 0.3, pointRadius: 4, fill: true }] },
-    options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => '$' + Number(v).toFixed(2) } } } }
-  });
-
-  chartStations = new Chart(stationsCanvas, {
-    type: 'doughnut',
-    data: { labels: stationLabels, datasets: [{ data: stationData, backgroundColor: stationLabels.map((_,i) => palette[i % palette.length]), borderWidth: 2, borderColor: border }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: tick, font: { size: 11 }, boxWidth: 10, padding: 8 } } } }
-  });
+  chartStations = new Chart(document.getElementById('chart-stations'), { type:'doughnut', data:{labels:stationLabels,datasets:[{data:stationData,backgroundColor:stationLabels.map((_,i)=>palette[i%palette.length]),borderWidth:2,borderColor:dark?'#1c1c1f':'#fff'}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tick,font:{size:11},boxWidth:10,padding:8}}}} });
 }
 
 async function handlePhoto(input) {
-  if (!input.files || !input.files[0]) return;
-  if (!getKey()) {
-    alert('Please set your OpenAI API key first.');
-    input.value = '';
-    return;
-  }
-
-  const file = input.files[0];
-  const url = URL.createObjectURL(file);
-  document.getElementById('photo-preview-area').innerHTML = `<img src="${url}" class="photo-preview" alt="Receipt preview" />`;
+  const file = input.files?.[0]; if (!file) return;
+  document.getElementById('photo-preview-area').innerHTML = `<img src="${URL.createObjectURL(file)}" class="photo-preview" alt="Receipt preview" />`;
   document.getElementById('analyzing-msg').style.display = 'flex';
-
+  document.getElementById('ocr-status').textContent = 'Reading receipt…';
+  const ocrBox = document.getElementById('ocr-text'); ocrBox.style.display = 'none'; ocrBox.textContent = '';
   try {
-    const base64 = await toBase64(file);
-    const payload = {
-      model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      max_tokens: 300,
-      messages: [
-        {
-          role: 'system',
-          content: 'You extract gas receipt data. Return only valid JSON. Use null for missing fields. Do not include markdown.'
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: 'data:' + file.type + ';base64,' + base64 } },
-            { type: 'text', text: 'Extract gas station fill-up info from this receipt. Return JSON with exactly these keys: station, date, ppg, gallons, total. Date must be YYYY-MM-DD. ppg, gallons, and total must be numbers or null.' }
-          ]
-        }
-      ]
-    };
-
-    const data = await callOpenAI(payload);
-    const rawText = data?.choices?.[0]?.message?.content || '';
-    const parsed = parseJsonFromText(rawText);
-
-    if (!parsed || typeof parsed !== 'object') throw new Error('No valid JSON returned');
-
-    setField('f-station', parsed.station);
-    setField('f-date', parsed.date);
-    setField('f-ppg', parsed.ppg);
-    setField('f-gallons', parsed.gallons);
-
-    if (parsed.total !== null && parsed.total !== undefined && parsed.total !== '') {
-      setField('f-total', parsed.total);
-    } else if (parsed.ppg && parsed.gallons) {
-      document.getElementById('f-total').value = (Number(parsed.ppg) * Number(parsed.gallons)).toFixed(2);
-    }
-
-    showMsg('Receipt scanned. Review and save.');
-  } catch (error) {
-    console.error(error);
-    alert('The receipt was uploaded, but the app could not extract the fields. You can still enter them manually. Check your API key, billing, and browser console for details.');
+    const result = await Tesseract.recognize(file, 'eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') document.getElementById('ocr-status').textContent = `Reading receipt… ${Math.round((m.progress || 0) * 100)}%`;
+      }
+    });
+    const text = result?.data?.text || '';
+    const parsed = parseReceiptText(text);
+    ocrBox.textContent = text.trim() || 'No text detected.';
+    ocrBox.style.display = 'block';
+    if (parsed.station) document.getElementById('f-station').value = parsed.station;
+    if (parsed.date) document.getElementById('f-date').value = parsed.date;
+    if (parsed.ppg) document.getElementById('f-ppg').value = parsed.ppg;
+    if (parsed.gallons) document.getElementById('f-gallons').value = parsed.gallons;
+    if (parsed.total) document.getElementById('f-total').value = parsed.total;
+    else calcTotal();
+    showMsg('OCR complete. Review and save.');
+  } catch (err) {
+    console.error(err);
+    alert('Could not read the receipt with OCR. Try cropping closer, better lighting, or enter it manually.');
   } finally {
     document.getElementById('analyzing-msg').style.display = 'none';
     input.value = '';
   }
 }
 
-function setField(id, value) {
-  if (value === null || value === undefined || value === '') return;
-  document.getElementById(id).value = value;
-}
+function parseReceiptText(text) {
+  const clean = text.replace(/\r/g, '').replace(/[|]/g, 'I');
+  const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
+  const upper = clean.toUpperCase();
+  let station = '';
+  const firstUseful = lines.find(l => /SHELL|EXXON|MOBIL|BP|SUNOCO|WAWA|COSTCO|BJ|BJS|WHOLESALE|CHEVRON|TEXACO|CITGO|GULF|VALERO|MARATHON/i.test(l));
+  if (firstUseful) station = firstUseful.replace(/B J'?S/i, "BJ's").replace(/\s+/g, ' ');
+  if (!station && lines.length) station = lines[0].replace(/\s+/g, ' ');
 
-function parseJsonFromText(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const match = String(text).match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON object found in model response');
-    return JSON.parse(match[0]);
+  let date = findDate(clean);
+  let ppg = findMoneyNumber(upper, /(PRICE\s*\/\s*GAL|PRICE\s*GAL|PRICE\/GAL|P\/G|PPG)\s*[:$]?\s*\$?\s*([0-9][0-9.,]*)/i);
+  let gallons = findMoneyNumber(upper, /(QTY\s*\/\s*GAL|QTY\s*GAL|QTY\/GAL|GALLONS?|GAL)\s*[:]?\s*([0-9][0-9.,]*)/i);
+  let total = findMoneyNumber(upper, /(FUEL\s*TOTAL|TOTAL\s*FUEL|TOTAL|AMOUNT)\s*[:$]?\s*\$?\s*([0-9][0-9.,]*)/i);
+
+  // Fallbacks for common receipt OCR layouts.
+  if (!ppg) ppg = pickNearbyNumber(lines, /PRICE/i);
+  if (!gallons) gallons = pickNearbyNumber(lines, /QTY|GALLON|GAL/i);
+  if (!total) total = pickNearbyNumber(lines, /TOTAL/i);
+
+  // Avoid using a card total/ref number as gas total if it is huge.
+  if (total && Number(total) > 300) total = '';
+
+  return { station, date, ppg, gallons, total };
+}
+function findMoneyNumber(text, regex) {
+  const m = text.match(regex); if (!m) return '';
+  return normalizeNumber(m[2] || m[1]);
+}
+function pickNearbyNumber(lines, labelRegex) {
+  for (const line of lines) {
+    if (!labelRegex.test(line)) continue;
+    const nums = line.match(/[0-9]+[.,][0-9]+|[0-9]+/g);
+    if (nums?.length) return normalizeNumber(nums[nums.length - 1]);
   }
+  return '';
 }
-
-async function callOpenAI(payload) {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + getKey()
-    },
-    body: JSON.stringify(payload)
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = data?.error?.message || 'OpenAI API request failed.';
-    throw new Error(msg);
-  }
-  return data;
+function normalizeNumber(value) {
+  if (!value) return '';
+  const n = String(value).replace(/[^0-9.]/g, '');
+  const parsed = Number(n);
+  return Number.isFinite(parsed) ? String(parsed) : '';
 }
-
-function toBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-const SUGGESTIONS = [
-  'Which station is cheapest?',
-  'What is my monthly average spend?',
-  'What is my most expensive fill-up?',
-  'How many gallons have I bought total?',
-  'Am I spending more or less recently?'
-];
-
-function renderChips() {
-  document.getElementById('chips').innerHTML = SUGGESTIONS.map(s =>
-    `<span class="chip" onclick="askChip('${escapeJs(s)}')">${escapeHtml(s)}</span>`
-  ).join('');
-}
-
-function askChip(q) {
-  document.getElementById('chat-input').value = q;
-  sendQuestion();
-}
-
-async function sendQuestion() {
-  if (!getKey()) {
-    alert('Please set your OpenAI API key first.');
-    return;
-  }
-
-  const input = document.getElementById('chat-input');
-  const question = input.value.trim();
-  if (!question) return;
-  input.value = '';
-
-  const messagesEl = document.getElementById('chat-messages');
-  messagesEl.innerHTML += `<div class="msg msg-user">${escapeHtml(question)}</div>`;
-  const loadingEl = document.createElement('div');
-  loadingEl.className = 'msg msg-ai msg-loading';
-  loadingEl.textContent = 'Thinking…';
-  messagesEl.appendChild(loadingEl);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-
-  const dataStr = entries.length
-    ? JSON.stringify(entries.map(e => ({ date:e.date, station:e.station, ppg:e.ppg, gallons:e.gallons, total:e.total })))
-    : 'No fill-up entries yet.';
-
-  try {
-    const data = await callOpenAI({
-      model: 'gpt-4o-mini',
-      max_tokens: 400,
-      messages: [
-        { role: 'system', content: `You are a helpful gas spending assistant. The user's fill-up history: ${dataStr}. Answer concisely with specific numbers. If no data exists, say so kindly.` },
-        { role: 'user', content: question }
-      ]
-    });
-
-    loadingEl.className = 'msg msg-ai';
-    loadingEl.textContent = data?.choices?.[0]?.message?.content || 'No answer returned.';
-  } catch (error) {
-    console.error(error);
-    loadingEl.className = 'msg msg-ai';
-    loadingEl.textContent = 'Error connecting to OpenAI. Check your API key, billing, and internet connection.';
-  }
-
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+function findDate(text) {
+  const m = text.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (!m) return '';
+  let month = Number(m[1]), day = Number(m[2]), year = Number(m[3]);
+  if (year < 100) year += 2000;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return '';
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
 }
 
 function exportData() {
-  const backup = {
-    app: 'Gas Tracker',
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    entries
-  };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'gas-tracker-backup.json';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  const backup = { app:'Gas Tracker', version:3, exportedAt:new Date().toISOString(), entries };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gas-tracker-backup.json'; document.body.appendChild(a); a.click(); a.remove();
 }
-
 async function importData(input) {
-  const file = input.files?.[0];
-  if (!file) return;
+  const file = input.files?.[0]; if (!file) return;
   try {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    const importedEntries = Array.isArray(parsed) ? parsed : parsed.entries;
-    if (!Array.isArray(importedEntries)) throw new Error('No entries array found');
-    const cleaned = importedEntries.map(normalizeEntry).filter(Boolean);
+    const parsed = JSON.parse(await file.text());
+    const imported = Array.isArray(parsed) ? parsed : parsed.entries;
+    if (!Array.isArray(imported)) throw new Error('No entries found');
+    const cleaned = imported.map(normalizeEntry).filter(Boolean);
     if (!cleaned.length) throw new Error('No valid entries found');
-    const shouldReplace = confirm('Replace current data? Press Cancel to merge imported data with current data.');
-    entries = shouldReplace ? cleaned : [...entries, ...cleaned];
-    entries.sort((a,b) => b.date.localeCompare(a.date));
-    saveEntries();
-    renderAll();
-    alert('Import complete.');
-  } catch (error) {
-    console.error(error);
-    alert('Could not import that file. Make sure it is a Gas Tracker JSON backup.');
-  } finally {
-    input.value = '';
-  }
+    const replace = confirm('Replace current data? Press Cancel to merge imported data with current data.');
+    entries = replace ? cleaned : [...entries, ...cleaned];
+    entries.sort((a,b) => b.date.localeCompare(a.date)); saveEntries(); renderAll(); alert('Import complete.');
+  } catch (err) { console.error(err); alert('Could not import that file. Make sure it is a Gas Tracker JSON backup.'); }
+  finally { input.value = ''; }
 }
+function escapeHtml(value) { return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function escapeJs(value) {
-  return String(value ?? '').replaceAll('\\', '\\\\').replaceAll("'", "\\'");
-}
-
-// Init
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-updateKeyStatus();
-renderChips();
-renderAll();
+document.getElementById('sync-banner').textContent = supabaseClient
+  ? 'Cloud sync is on. Entries save to Supabase and load across browsers/devices.'
+  : 'Cloud sync is off. Add your Supabase URL and anon key in the code to sync across devices.';
+loadEntriesFromCloud();
 </script>
 </body>
 </html>
