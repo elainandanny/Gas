@@ -34,23 +34,19 @@
     }
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
   .app { max-width: 760px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-
-  /* Header */
-  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; gap: 1rem; }
   .header-left { display: flex; align-items: center; gap: 12px; }
-  .logo { width: 38px; height: 38px; background: var(--accent-dark); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .logo { width: 38px; height: 38px; background: var(--accent-dark); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .logo svg { width: 22px; height: 22px; fill: var(--accent); }
   .app-title { font-size: 20px; font-weight: 600; }
   .app-sub { font-size: 12px; color: var(--muted); }
-  .key-btn { padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--muted); cursor: pointer; }
-  .key-btn:hover { color: var(--text); border-color: var(--accent); }
-
-  /* API Key modal */
+  .key-btn, .export-btn { padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .key-btn:hover, .export-btn:hover { color: var(--text); border-color: var(--accent); }
+  .top-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
   .modal-overlay.hidden { display: none; }
-  .modal { background: var(--surface); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 440px; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
+  .modal { background: var(--surface); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 460px; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
   .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
   .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
   .modal-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); color: var(--text); font-size: 14px; font-family: monospace; margin-bottom: 12px; }
@@ -63,48 +59,39 @@
   .key-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 8px; border-radius: 20px; }
   .key-status.set { background: rgba(46,171,111,0.12); color: var(--success); }
   .key-status.missing { background: rgba(226,75,74,0.12); color: var(--danger); }
-
-  /* Tabs */
   .tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; background: var(--surface2); border-radius: var(--radius); padding: 3px; }
   .tab { flex: 1; padding: 8px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; background: none; border-radius: 8px; transition: all 0.15s; }
   .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
-
-  /* Panels */
   .panel { display: none; }
   .panel.active { display: block; }
-
-  /* Metrics */
   .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
   .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
   .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
   .metric-value { font-size: 22px; font-weight: 600; }
   .metric-sub { font-size: 11px; color: var(--hint); margin-top: 3px; }
-
-  /* Section title */
   .section-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
-
-  /* Charts */
   .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
   .chart-wrap { position: relative; width: 100%; height: 220px; }
   .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .chart-wrap-sm { position: relative; width: 100%; height: 180px; }
-
-  /* Form */
   .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
   .photo-zone { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.15s; margin-bottom: 1rem; }
   .photo-zone:hover { border-color: var(--accent); background: rgba(232,200,64,0.04); }
   .photo-icon { font-size: 28px; margin-bottom: 6px; }
   .photo-zone-text { font-size: 13px; color: var(--muted); }
   .photo-zone-hint { font-size: 11px; color: var(--hint); margin-top: 3px; }
-  #photo-input { display: none; }
-  .photo-preview { max-width: 100%; max-height: 110px; border-radius: 6px; margin-bottom: 8px; }
+  #photo-input, #import-input { display: none; }
+  .photo-preview { max-width: 100%; max-height: 140px; border-radius: 6px; margin-bottom: 8px; }
   .analyzing { font-size: 12px; color: var(--muted); font-style: italic; display: flex; align-items: center; gap: 6px; }
   .spinner { width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  @media (max-width: 480px) { .form-row, .form-row-3 { grid-template-columns: 1fr; } .chart-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) {
+    .header { align-items:flex-start; }
+    .form-row, .form-row-3, .chart-grid { grid-template-columns: 1fr; }
+    .top-actions { flex-direction:column; align-items:flex-end; }
+  }
   .form-group { display: flex; flex-direction: column; gap: 5px; }
   .form-label { font-size: 12px; color: var(--muted); font-weight: 500; }
   .form-input { padding: 9px 11px; font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); color: var(--text); font-family: inherit; transition: border-color 0.15s; }
@@ -112,8 +99,6 @@
   .save-btn { padding: 10px 20px; background: var(--accent); color: var(--accent-dark); border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; }
   .save-btn:hover { opacity: 0.9; }
   .save-msg { font-size: 13px; margin-left: 10px; }
-
-  /* History */
   .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead th { text-align: left; padding: 10px 14px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -123,11 +108,9 @@
   .del-btn { background: none; border: none; cursor: pointer; color: var(--hint); font-size: 15px; padding: 2px 6px; border-radius: 4px; line-height: 1; }
   .del-btn:hover { background: rgba(226,75,74,0.1); color: var(--danger); }
   .empty { text-align: center; padding: 2.5rem; color: var(--muted); font-size: 14px; }
-
-  /* AI Chat */
   .chat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
   .chat-messages { padding: 1.25rem; min-height: 100px; max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-  .msg { padding: 10px 14px; border-radius: var(--radius); font-size: 14px; line-height: 1.55; max-width: 88%; }
+  .msg { padding: 10px 14px; border-radius: var(--radius); font-size: 14px; line-height: 1.55; max-width: 88%; white-space: pre-wrap; }
   .msg-user { background: var(--accent); color: var(--accent-dark); align-self: flex-end; font-weight: 500; }
   .msg-ai { background: var(--surface2); color: var(--text); align-self: flex-start; }
   .msg-loading { opacity: 0.6; font-style: italic; }
@@ -136,19 +119,16 @@
   .chat-input:focus { outline: none; border-color: var(--accent); }
   .chat-send { padding: 9px 16px; background: var(--accent-dark); color: var(--accent); border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .chat-send:hover { opacity: 0.85; }
-
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
   .chip { padding: 5px 11px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--muted); cursor: pointer; }
   .chip:hover { border-color: var(--accent); color: var(--text); }
-
-  /* No-key warning */
-  .no-key-banner { background: rgba(226,75,74,0.08); border: 1px solid rgba(226,75,74,0.2); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--danger); margin-bottom: 1rem; }
+  .banner { border-radius: var(--radius); padding: 10px 14px; font-size: 13px; margin-bottom: 1rem; line-height: 1.45; }
+  .no-key-banner { background: rgba(226,75,74,0.08); border: 1px solid rgba(226,75,74,0.2); color: var(--danger); }
+  .info-banner { background: rgba(46,171,111,0.08); border: 1px solid rgba(46,171,111,0.2); color: var(--success); }
 </style>
 </head>
 <body>
 <div class="app">
-
-  <!-- Header -->
   <div class="header">
     <div class="header-left">
       <div class="logo">
@@ -159,17 +139,21 @@
         <div class="app-sub">Log fill-ups · visualize trends · ask AI</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
+    <div class="top-actions">
       <span id="key-status" class="key-status missing">● No API key</span>
       <button class="key-btn" onclick="openKeyModal()">⚙ API Key</button>
+      <button class="export-btn" onclick="exportData()">Export</button>
+      <button class="export-btn" onclick="document.getElementById('import-input').click()">Import</button>
+      <input type="file" id="import-input" accept="application/json" onchange="importData(this)" />
     </div>
   </div>
 
-  <!-- API Key Modal -->
   <div class="modal-overlay hidden" id="key-modal">
     <div class="modal">
       <div class="modal-title">OpenAI API Key</div>
-      <div class="modal-sub">Your key is stored only in your browser (localStorage). It is never sent anywhere except directly to OpenAI. Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent);">platform.openai.com/api-keys</a>.</div>
+      <div class="modal-sub">
+        Because you are the only user right now, this version stores your OpenAI API key in this browser's localStorage. Do not publish this with your actual key hardcoded into the file.
+      </div>
       <input class="modal-input" type="password" id="key-input" placeholder="sk-proj-..." />
       <div class="modal-actions">
         <button class="btn" onclick="closeKeyModal()">Cancel</button>
@@ -179,7 +163,6 @@
     </div>
   </div>
 
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
     <button class="tab" onclick="switchTab('log')">Add Fill-Up</button>
@@ -187,32 +170,29 @@
     <button class="tab" onclick="switchTab('ask')">Ask AI</button>
   </div>
 
-  <!-- DASHBOARD -->
   <div id="tab-dashboard" class="panel active">
-    <div class="metrics" id="metrics-row">
-      <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">—</div></div>
-    </div>
+    <div class="banner info-banner">Your entries are saved automatically in this browser, so they stay after closing and reopening the site. Use Export/Import to back up or move your data.</div>
+    <div class="metrics" id="metrics-row"></div>
     <div class="chart-card">
       <div class="section-title">Total spending per fill-up</div>
-      <div class="chart-wrap"><canvas id="chart-spending" role="img" aria-label="Spending per fill-up over time">Gas spending bar chart.</canvas></div>
+      <div class="chart-wrap"><canvas id="chart-spending" role="img" aria-label="Spending per fill-up over time"></canvas></div>
     </div>
     <div class="chart-grid">
       <div class="chart-card">
         <div class="section-title">Price per gallon</div>
-        <div class="chart-wrap-sm"><canvas id="chart-ppg" role="img" aria-label="Price per gallon trend">Price per gallon line chart.</canvas></div>
+        <div class="chart-wrap-sm"><canvas id="chart-ppg" role="img" aria-label="Price per gallon trend"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="section-title">Gallons by station</div>
-        <div class="chart-wrap-sm"><canvas id="chart-stations" role="img" aria-label="Gallons by station">Station donut chart.</canvas></div>
+        <div class="chart-wrap-sm"><canvas id="chart-stations" role="img" aria-label="Gallons by station"></canvas></div>
       </div>
     </div>
   </div>
 
-  <!-- ADD FILL-UP -->
   <div id="tab-log" class="panel">
     <div class="form-card">
       <div class="section-title" style="margin-bottom:12px;">Scan receipt with AI</div>
-      <div id="no-key-photo" class="no-key-banner" style="display:none;">Set your OpenAI API key above to use photo scanning.</div>
+      <div id="no-key-photo" class="banner no-key-banner" style="display:none;">Set your OpenAI API key above to use photo scanning.</div>
       <div class="photo-zone" onclick="document.getElementById('photo-input').click()" id="photo-zone">
         <div id="photo-preview-area"></div>
         <div class="photo-icon">📷</div>
@@ -256,22 +236,18 @@
     </div>
   </div>
 
-  <!-- HISTORY -->
   <div id="tab-history" class="panel">
     <div class="table-wrap">
       <table>
-        <thead><tr>
-          <th>Date</th><th>Station</th><th>$/gal</th><th>Gallons</th><th>Total</th><th></th>
-        </tr></thead>
+        <thead><tr><th>Date</th><th>Station</th><th>$/gal</th><th>Gallons</th><th>Total</th><th></th></tr></thead>
         <tbody id="history-body"></tbody>
       </table>
       <div id="history-empty" class="empty" style="display:none;">No fill-ups yet — add your first one!</div>
     </div>
   </div>
 
-  <!-- ASK AI -->
   <div id="tab-ask" class="panel">
-    <div id="no-key-ask" class="no-key-banner" style="display:none;">Set your OpenAI API key (top-right button) to use the AI assistant.</div>
+    <div id="no-key-ask" class="banner no-key-banner" style="display:none;">Set your OpenAI API key above to use the AI assistant.</div>
     <div class="chips" id="chips"></div>
     <div class="chat-card">
       <div class="chat-messages" id="chat-messages">
@@ -283,91 +259,123 @@
       </div>
     </div>
   </div>
-
 </div>
 
 <script>
-// ── Storage helpers ──────────────────────────────────────────────
-let entries = JSON.parse(localStorage.getItem('gas-entries') || '[]');
+const STORAGE_KEY = 'gas-tracker-entries-v2';
+const API_KEY_STORAGE_KEY = 'openai-key';
+let entries = loadEntries();
+let chartSpending, chartPPG, chartStations;
 
-function save() {
-  localStorage.setItem('gas-entries', JSON.stringify(entries));
+function loadEntries() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('gas-entries') || '[]';
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeEntry).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+  } catch {
+    return [];
+  }
 }
 
-// ── API Key ──────────────────────────────────────────────────────
-function getKey() { return localStorage.getItem('openai-key') || ''; }
+function normalizeEntry(e) {
+  if (!e) return null;
+  const station = String(e.station || '').trim();
+  const date = String(e.date || '').trim();
+  const ppg = Number(e.ppg);
+  const gallons = Number(e.gallons);
+  const total = Number(e.total);
+  if (!station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) return null;
+  return { id: e.id || Date.now() + Math.random(), station, date, ppg, gallons, total };
+}
 
+function saveEntries() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+function getKey() { return localStorage.getItem(API_KEY_STORAGE_KEY) || ''; }
 function openKeyModal() {
   document.getElementById('key-input').value = getKey();
   document.getElementById('key-modal').classList.remove('hidden');
 }
 function closeKeyModal() { document.getElementById('key-modal').classList.add('hidden'); }
 function saveKey() {
-  const k = document.getElementById('key-input').value.trim();
-  localStorage.setItem('openai-key', k);
+  const key = document.getElementById('key-input').value.trim();
+  if (key) localStorage.setItem(API_KEY_STORAGE_KEY, key);
+  else localStorage.removeItem(API_KEY_STORAGE_KEY);
   closeKeyModal();
   updateKeyStatus();
 }
 function clearKey() {
-  localStorage.removeItem('openai-key');
+  localStorage.removeItem(API_KEY_STORAGE_KEY);
   document.getElementById('key-input').value = '';
   closeKeyModal();
   updateKeyStatus();
 }
 function updateKeyStatus() {
   const el = document.getElementById('key-status');
-  const has = !!getKey();
-  el.textContent = has ? '● API key set' : '● No API key';
+  const has = Boolean(getKey());
+  el.textContent = has ? '● API key saved' : '● No API key';
   el.className = 'key-status ' + (has ? 'set' : 'missing');
   document.getElementById('no-key-photo').style.display = has ? 'none' : 'block';
   document.getElementById('no-key-ask').style.display = has ? 'none' : 'block';
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────
 function switchTab(name) {
   const names = ['dashboard','log','history','ask'];
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
-  if (name==='dashboard') renderCharts();
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'dashboard') renderCharts();
 }
 
-// ── Form helpers ─────────────────────────────────────────────────
 function calcTotal() {
   const p = parseFloat(document.getElementById('f-ppg').value);
   const g = parseFloat(document.getElementById('f-gallons').value);
-  if (!isNaN(p) && !isNaN(g)) document.getElementById('f-total').value = (p*g).toFixed(2);
+  if (!Number.isNaN(p) && !Number.isNaN(g)) {
+    document.getElementById('f-total').value = (p * g).toFixed(2);
+  }
 }
 
 function addEntry() {
   const station = document.getElementById('f-station').value.trim();
-  const date    = document.getElementById('f-date').value;
-  const ppg     = parseFloat(document.getElementById('f-ppg').value);
+  const date = document.getElementById('f-date').value;
+  const ppg = parseFloat(document.getElementById('f-ppg').value);
   const gallons = parseFloat(document.getElementById('f-gallons').value);
-  const total   = parseFloat(document.getElementById('f-total').value);
-  if (!station||!date||isNaN(ppg)||isNaN(gallons)||isNaN(total)) {
-    showMsg('Please fill in all fields.', true); return;
+  const total = parseFloat(document.getElementById('f-total').value);
+
+  if (!station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) {
+    showMsg('Please fill in all fields.', true);
+    return;
   }
+
   entries.unshift({ id: Date.now(), station, date, ppg, gallons, total });
-  save(); renderAll();
-  ['f-station','f-ppg','f-gallons','f-total'].forEach(id => document.getElementById(id).value='');
+  entries.sort((a,b) => b.date.localeCompare(a.date));
+  saveEntries();
+  renderAll();
+  ['f-station','f-ppg','f-gallons','f-total'].forEach(id => document.getElementById(id).value = '');
   showMsg('Saved!');
 }
 
-function showMsg(msg, err) {
+function showMsg(msg, err = false) {
   const el = document.getElementById('save-msg');
   el.textContent = msg;
   el.style.color = err ? 'var(--danger)' : 'var(--success)';
-  setTimeout(()=>{ el.textContent=''; }, 2500);
+  setTimeout(() => { el.textContent = ''; }, 2500);
 }
 
 function deleteEntry(id) {
-  entries = entries.filter(e => e.id !== id);
-  save(); renderAll();
+  if (!confirm('Delete this fill-up?')) return;
+  entries = entries.filter(e => String(e.id) !== String(id));
+  saveEntries();
+  renderAll();
 }
 
-// ── Render ───────────────────────────────────────────────────────
-function renderAll() { renderMetrics(); renderHistory(); renderCharts(); }
+function renderAll() {
+  renderMetrics();
+  renderHistory();
+  renderCharts();
+}
 
 function renderMetrics() {
   const el = document.getElementById('metrics-row');
@@ -375,134 +383,199 @@ function renderMetrics() {
     el.innerHTML = '<div class="metric"><div class="metric-label">No data yet</div><div class="metric-value" style="font-size:15px;">Add your first fill-up</div></div>';
     return;
   }
-  const totalSpend = entries.reduce((s,e)=>s+e.total,0);
-  const avgPPG     = entries.reduce((s,e)=>s+e.ppg,0)/entries.length;
-  const totalGal   = entries.reduce((s,e)=>s+e.gallons,0);
-  const fills      = entries.length;
+  const totalSpend = entries.reduce((s,e) => s + e.total, 0);
+  const avgPPG = entries.reduce((s,e) => s + e.ppg, 0) / entries.length;
+  const totalGal = entries.reduce((s,e) => s + e.gallons, 0);
+  const fills = entries.length;
+  const last = [...entries].sort((a,b) => b.date.localeCompare(a.date))[0];
   el.innerHTML = `
-    <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${fills} fill-up${fills!==1?'s':''}</div></div>
+    <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${fills} fill-up${fills !== 1 ? 's' : ''}</div></div>
     <div class="metric"><div class="metric-label">Avg price / gal</div><div class="metric-value">$${avgPPG.toFixed(3)}</div></div>
     <div class="metric"><div class="metric-label">Total gallons</div><div class="metric-value">${totalGal.toFixed(1)}</div></div>
-    <div class="metric"><div class="metric-label">Last fill-up</div><div class="metric-value" style="font-size:15px;">${entries[0].station}</div><div class="metric-sub">${entries[0].date}</div></div>
+    <div class="metric"><div class="metric-label">Last fill-up</div><div class="metric-value" style="font-size:15px;">${escapeHtml(last.station)}</div><div class="metric-sub">${last.date}</div></div>
   `;
 }
 
 function renderHistory() {
   const tbody = document.getElementById('history-body');
   const empty = document.getElementById('history-empty');
-  if (!entries.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  tbody.innerHTML = entries.map(e=>`
+  if (!entries.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = entries.map(e => `
     <tr>
-      <td>${e.date}</td><td>${e.station}</td>
-      <td>$${e.ppg.toFixed(3)}</td><td>${e.gallons.toFixed(3)}</td>
+      <td>${escapeHtml(e.date)}</td>
+      <td>${escapeHtml(e.station)}</td>
+      <td>$${e.ppg.toFixed(3)}</td>
+      <td>${e.gallons.toFixed(3)}</td>
       <td>$${e.total.toFixed(2)}</td>
-      <td><button class="del-btn" onclick="deleteEntry(${e.id})">✕</button></td>
+      <td><button class="del-btn" onclick="deleteEntry('${e.id}')">✕</button></td>
     </tr>
   `).join('');
 }
 
-let chartSpending, chartPPG, chartStations;
 function renderCharts() {
-  if (!entries.length) return;
-  const sorted = [...entries].sort((a,b)=>a.date.localeCompare(b.date));
-  const labels  = sorted.map(e=>e.date.slice(5));
-  const totals  = sorted.map(e=>parseFloat(e.total.toFixed(2)));
-  const ppgs    = sorted.map(e=>parseFloat(e.ppg.toFixed(3)));
+  const spendingCanvas = document.getElementById('chart-spending');
+  const ppgCanvas = document.getElementById('chart-ppg');
+  const stationsCanvas = document.getElementById('chart-stations');
 
-  const stMap = {};
-  entries.forEach(e=>{ stMap[e.station]=(stMap[e.station]||0)+e.gallons; });
-  const sLabels = Object.keys(stMap);
-  const sData   = sLabels.map(k=>parseFloat(stMap[k].toFixed(2)));
+  if (chartSpending) chartSpending.destroy();
+  if (chartPPG) chartPPG.destroy();
+  if (chartStations) chartStations.destroy();
+
+  if (!entries.length) return;
+
+  const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+  const labels = sorted.map(e => e.date.slice(5));
+  const totals = sorted.map(e => Number(e.total.toFixed(2)));
+  const ppgs = sorted.map(e => Number(e.ppg.toFixed(3)));
+
+  const stationMap = {};
+  entries.forEach(e => { stationMap[e.station] = (stationMap[e.station] || 0) + e.gallons; });
+  const stationLabels = Object.keys(stationMap);
+  const stationData = stationLabels.map(k => Number(stationMap[k].toFixed(2)));
 
   const dark = matchMedia('(prefers-color-scheme:dark)').matches;
   const grid = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const tick = dark ? '#777' : '#999';
+  const tick = dark ? '#999' : '#777';
+  const border = dark ? '#1c1c1f' : '#fff';
+  const palette = ['#e8c840','#1a6eb5','#e05a2b','#2eab6f','#9b5de5','#f4845f'];
 
   const base = {
-    responsive:true, maintainAspectRatio:false,
-    plugins:{ legend:{display:false} },
-    scales:{
-      x:{ grid:{color:grid}, ticks:{color:tick,font:{size:11},autoSkip:true,maxTicksLimit:8} },
-      y:{ grid:{color:grid}, ticks:{color:tick,font:{size:11}}, beginAtZero:false }
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: grid }, ticks: { color: tick, font: { size: 11 }, autoSkip: true, maxTicksLimit: 8 } },
+      y: { grid: { color: grid }, ticks: { color: tick, font: { size: 11 } }, beginAtZero: false }
     }
   };
 
-  if (chartSpending) chartSpending.destroy();
-  chartSpending = new Chart(document.getElementById('chart-spending'),{
-    type:'bar',
-    data:{ labels, datasets:[{ data:totals, backgroundColor:'rgba(232,200,64,0.75)', borderColor:'#e8c840', borderWidth:1 }] },
-    options:{ ...base, scales:{...base.scales, y:{...base.scales.y, ticks:{...base.scales.y.ticks, callback:v=>'$'+v}}} }
+  chartSpending = new Chart(spendingCanvas, {
+    type: 'bar',
+    data: { labels, datasets: [{ data: totals, backgroundColor: 'rgba(232,200,64,0.75)', borderColor: '#e8c840', borderWidth: 1 }] },
+    options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => '$' + v } } } }
   });
 
-  if (chartPPG) chartPPG.destroy();
-  chartPPG = new Chart(document.getElementById('chart-ppg'),{
-    type:'line',
-    data:{ labels, datasets:[{ data:ppgs, borderColor:'#e8c840', backgroundColor:'rgba(232,200,64,0.1)', tension:0.3, pointRadius:4, fill:true }] },
-    options:{ ...base, scales:{...base.scales, y:{...base.scales.y, ticks:{...base.scales.y.ticks, callback:v=>'$'+v.toFixed(2)}}} }
+  chartPPG = new Chart(ppgCanvas, {
+    type: 'line',
+    data: { labels, datasets: [{ data: ppgs, borderColor: '#e8c840', backgroundColor: 'rgba(232,200,64,0.1)', tension: 0.3, pointRadius: 4, fill: true }] },
+    options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => '$' + Number(v).toFixed(2) } } } }
   });
 
-  const palette=['#e8c840','#1a6eb5','#e05a2b','#2eab6f','#9b5de5','#f4845f'];
-  if (chartStations) chartStations.destroy();
-  chartStations = new Chart(document.getElementById('chart-stations'),{
-    type:'doughnut',
-    data:{ labels:sLabels, datasets:[{ data:sData, backgroundColor:sLabels.map((_,i)=>palette[i%palette.length]), borderWidth:2, borderColor:dark?'#1c1c1f':'#fff' }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{size:11}, boxWidth:10, padding:8 } } } }
+  chartStations = new Chart(stationsCanvas, {
+    type: 'doughnut',
+    data: { labels: stationLabels, datasets: [{ data: stationData, backgroundColor: stationLabels.map((_,i) => palette[i % palette.length]), borderWidth: 2, borderColor: border }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: tick, font: { size: 11 }, boxWidth: 10, padding: 8 } } } }
   });
 }
 
-// ── Photo / OCR ──────────────────────────────────────────────────
 async function handlePhoto(input) {
-  if (!input.files[0]) return;
-  if (!getKey()) { alert('Please set your OpenAI API key first.'); return; }
+  if (!input.files || !input.files[0]) return;
+  if (!getKey()) {
+    alert('Please set your OpenAI API key first.');
+    input.value = '';
+    return;
+  }
+
   const file = input.files[0];
-  const url  = URL.createObjectURL(file);
-  document.getElementById('photo-preview-area').innerHTML = `<img src="${url}" class="photo-preview" />`;
+  const url = URL.createObjectURL(file);
+  document.getElementById('photo-preview-area').innerHTML = `<img src="${url}" class="photo-preview" alt="Receipt preview" />`;
   document.getElementById('analyzing-msg').style.display = 'flex';
 
-  const base64 = await toBase64(file);
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions',{
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+getKey() },
-      body: JSON.stringify({
-        model:'gpt-4o',
-        max_tokens:300,
-        messages:[{
-          role:'user',
-          content:[
-            { type:'image_url', image_url:{ url:'data:'+file.type+';base64,'+base64 } },
-            { type:'text', text:'Extract gas station fill-up info from this image. Return ONLY valid JSON with keys: station (string), date (YYYY-MM-DD, use today if not visible), ppg (number), gallons (number), total (number). Use null for missing fields. No markdown, no explanation.' }
+    const base64 = await toBase64(file);
+    const payload = {
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      max_tokens: 300,
+      messages: [
+        {
+          role: 'system',
+          content: 'You extract gas receipt data. Return only valid JSON. Use null for missing fields. Do not include markdown.'
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: 'data:' + file.type + ';base64,' + base64 } },
+            { type: 'text', text: 'Extract gas station fill-up info from this receipt. Return JSON with exactly these keys: station, date, ppg, gallons, total. Date must be YYYY-MM-DD. ppg, gallons, and total must be numbers or null.' }
           ]
-        }]
-      })
-    });
-    const data = await res.json();
-    let txt = data.choices[0].message.content.replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(txt);
-    if (parsed.station)  document.getElementById('f-station').value = parsed.station;
-    if (parsed.date)     document.getElementById('f-date').value    = parsed.date;
-    if (parsed.ppg)      document.getElementById('f-ppg').value     = parsed.ppg;
-    if (parsed.gallons)  document.getElementById('f-gallons').value = parsed.gallons;
-    if (parsed.total)    document.getElementById('f-total').value   = parsed.total;
-    else if (parsed.ppg && parsed.gallons) document.getElementById('f-total').value = (parsed.ppg*parsed.gallons).toFixed(2);
-  } catch(e) {
-    alert('Could not read receipt. Try a clearer photo or fill in manually.');
-    console.error(e);
+        }
+      ]
+    };
+
+    const data = await callOpenAI(payload);
+    const rawText = data?.choices?.[0]?.message?.content || '';
+    const parsed = parseJsonFromText(rawText);
+
+    if (!parsed || typeof parsed !== 'object') throw new Error('No valid JSON returned');
+
+    setField('f-station', parsed.station);
+    setField('f-date', parsed.date);
+    setField('f-ppg', parsed.ppg);
+    setField('f-gallons', parsed.gallons);
+
+    if (parsed.total !== null && parsed.total !== undefined && parsed.total !== '') {
+      setField('f-total', parsed.total);
+    } else if (parsed.ppg && parsed.gallons) {
+      document.getElementById('f-total').value = (Number(parsed.ppg) * Number(parsed.gallons)).toFixed(2);
+    }
+
+    showMsg('Receipt scanned. Review and save.');
+  } catch (error) {
+    console.error(error);
+    alert('The receipt was uploaded, but the app could not extract the fields. You can still enter them manually. Check your API key, billing, and browser console for details.');
+  } finally {
+    document.getElementById('analyzing-msg').style.display = 'none';
+    input.value = '';
   }
-  document.getElementById('analyzing-msg').style.display = 'none';
+}
+
+function setField(id, value) {
+  if (value === null || value === undefined || value === '') return;
+  document.getElementById(id).value = value;
+}
+
+function parseJsonFromText(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    const match = String(text).match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON object found in model response');
+    return JSON.parse(match[0]);
+  }
+}
+
+async function callOpenAI(payload) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + getKey()
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data?.error?.message || 'OpenAI API request failed.';
+    throw new Error(msg);
+  }
+  return data;
 }
 
 function toBase64(file) {
-  return new Promise((res,rej)=>{
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
-// ── AI Chat ──────────────────────────────────────────────────────
 const SUGGESTIONS = [
   'Which station is cheapest?',
   'What is my monthly average spend?',
@@ -512,8 +585,8 @@ const SUGGESTIONS = [
 ];
 
 function renderChips() {
-  document.getElementById('chips').innerHTML = SUGGESTIONS.map(s=>
-    `<span class="chip" onclick="askChip('${s}')">${s}</span>`
+  document.getElementById('chips').innerHTML = SUGGESTIONS.map(s =>
+    `<span class="chip" onclick="askChip('${escapeJs(s)}')">${escapeHtml(s)}</span>`
   ).join('');
 }
 
@@ -523,48 +596,103 @@ function askChip(q) {
 }
 
 async function sendQuestion() {
-  if (!getKey()) { alert('Please set your OpenAI API key first.'); return; }
+  if (!getKey()) {
+    alert('Please set your OpenAI API key first.');
+    return;
+  }
+
   const input = document.getElementById('chat-input');
-  const q = input.value.trim();
-  if (!q) return;
+  const question = input.value.trim();
+  if (!question) return;
   input.value = '';
 
-  const msgs = document.getElementById('chat-messages');
-  msgs.innerHTML += `<div class="msg msg-user">${q}</div>`;
-  const loadEl = document.createElement('div');
-  loadEl.className = 'msg msg-ai msg-loading';
-  loadEl.textContent = 'Thinking…';
-  msgs.appendChild(loadEl);
-  msgs.scrollTop = msgs.scrollHeight;
+  const messagesEl = document.getElementById('chat-messages');
+  messagesEl.innerHTML += `<div class="msg msg-user">${escapeHtml(question)}</div>`;
+  const loadingEl = document.createElement('div');
+  loadingEl.className = 'msg msg-ai msg-loading';
+  loadingEl.textContent = 'Thinking…';
+  messagesEl.appendChild(loadingEl);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 
   const dataStr = entries.length
-    ? JSON.stringify(entries.map(e=>({ date:e.date, station:e.station, ppg:e.ppg, gallons:e.gallons, total:e.total })))
+    ? JSON.stringify(entries.map(e => ({ date:e.date, station:e.station, ppg:e.ppg, gallons:e.gallons, total:e.total })))
     : 'No fill-up entries yet.';
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions',{
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+getKey() },
-      body: JSON.stringify({
-        model:'gpt-4o-mini',
-        max_tokens:400,
-        messages:[
-          { role:'system', content:`You are a helpful gas spending assistant. The user's fill-up history: ${dataStr}. Answer concisely with specific numbers. If no data, say so kindly.` },
-          { role:'user', content:q }
-        ]
-      })
+    const data = await callOpenAI({
+      model: 'gpt-4o-mini',
+      max_tokens: 400,
+      messages: [
+        { role: 'system', content: `You are a helpful gas spending assistant. The user's fill-up history: ${dataStr}. Answer concisely with specific numbers. If no data exists, say so kindly.` },
+        { role: 'user', content: question }
+      ]
     });
-    const data = await res.json();
-    loadEl.className = 'msg msg-ai';
-    loadEl.textContent = data.choices[0].message.content;
-  } catch(e) {
-    loadEl.className = 'msg msg-ai';
-    loadEl.textContent = 'Error connecting. Check your API key and try again.';
+
+    loadingEl.className = 'msg msg-ai';
+    loadingEl.textContent = data?.choices?.[0]?.message?.content || 'No answer returned.';
+  } catch (error) {
+    console.error(error);
+    loadingEl.className = 'msg msg-ai';
+    loadingEl.textContent = 'Error connecting to OpenAI. Check your API key, billing, and internet connection.';
   }
-  msgs.scrollTop = msgs.scrollHeight;
+
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-// ── Init ─────────────────────────────────────────────────────────
+function exportData() {
+  const backup = {
+    app: 'Gas Tracker',
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    entries
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gas-tracker-backup.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function importData(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const importedEntries = Array.isArray(parsed) ? parsed : parsed.entries;
+    if (!Array.isArray(importedEntries)) throw new Error('No entries array found');
+    const cleaned = importedEntries.map(normalizeEntry).filter(Boolean);
+    if (!cleaned.length) throw new Error('No valid entries found');
+    const shouldReplace = confirm('Replace current data? Press Cancel to merge imported data with current data.');
+    entries = shouldReplace ? cleaned : [...entries, ...cleaned];
+    entries.sort((a,b) => b.date.localeCompare(a.date));
+    saveEntries();
+    renderAll();
+    alert('Import complete.');
+  } catch (error) {
+    console.error(error);
+    alert('Could not import that file. Make sure it is a Gas Tracker JSON backup.');
+  } finally {
+    input.value = '';
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function escapeJs(value) {
+  return String(value ?? '').replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+}
+
+// Init
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 updateKeyStatus();
 renderChips();
