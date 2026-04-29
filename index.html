@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Gas Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,63 +17,57 @@
     :root { --bg: #111113; --surface: #1c1c1f; --surface2: #26262a; --border: rgba(255,255,255,0.1); --text: #f0efea; --muted: #999; --hint: #666; }
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-  .app { max-width: 760px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  .app { max-width: 920px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
   .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; gap: 1rem; }
   .header-left { display: flex; align-items: center; gap: 12px; }
   .logo { width: 38px; height: 38px; background: var(--accent-dark); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .logo svg { width: 22px; height: 22px; fill: var(--accent); }
   .app-title { font-size: 20px; font-weight: 600; }
   .app-sub { font-size: 12px; color: var(--muted); }
-  .export-btn { padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
-  .export-btn:hover { color: var(--text); border-color: var(--accent); }
-  .top-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-  #import-input, #photo-input { display: none; }
+  .sync-pill { font-size: 11px; padding: 4px 9px; border-radius: 20px; background: rgba(46,171,111,0.12); color: var(--success); white-space: nowrap; }
   .tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; background: var(--surface2); border-radius: var(--radius); padding: 3px; }
   .tab { flex: 1; padding: 8px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; background: none; border-radius: 8px; transition: all 0.15s; }
   .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
   .panel { display: none; }
   .panel.active { display: block; }
+  .banner { border-radius: var(--radius); padding: 10px 14px; font-size: 13px; margin-bottom: 1rem; line-height: 1.45; }
+  .info-banner { background: rgba(46,171,111,0.08); border: 1px solid rgba(46,171,111,0.2); color: var(--success); }
+  .warning-banner { background: rgba(226,75,74,0.08); border: 1px solid rgba(226,75,74,0.2); color: var(--danger); }
   .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
   .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
   .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
   .metric-value { font-size: 22px; font-weight: 600; }
   .metric-sub { font-size: 11px; color: var(--hint); margin-top: 3px; }
   .section-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
-  .chart-card, .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
-  .chart-wrap { position: relative; width: 100%; height: 220px; }
+  .chart-card, .form-card, .filter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .chart-wrap { position: relative; width: 100%; height: 230px; }
   .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .chart-wrap-sm { position: relative; width: 100%; height: 180px; }
-  .photo-zone { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.15s; margin-bottom: 1rem; }
-  .photo-zone:hover { border-color: var(--accent); background: rgba(232,200,64,0.04); }
-  .photo-icon { font-size: 28px; margin-bottom: 6px; }
-  .photo-zone-text { font-size: 13px; color: var(--muted); }
-  .photo-zone-hint { font-size: 11px; color: var(--hint); margin-top: 3px; }
-  .photo-preview { max-width: 100%; max-height: 140px; border-radius: 6px; margin-bottom: 8px; }
-  .analyzing { font-size: 12px; color: var(--muted); font-style: italic; display: flex; align-items: center; gap: 6px; }
-  .spinner { width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .chart-wrap-sm { position: relative; width: 100%; height: 190px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  @media (max-width: 560px) { .header { align-items:flex-start; } .form-row, .form-row-3, .chart-grid { grid-template-columns: 1fr; } .top-actions { flex-direction:column; align-items:flex-end; } }
+  .filter-grid { display: grid; grid-template-columns: 1.2fr 1.2fr 1fr auto; gap: 10px; align-items: end; }
+  @media (max-width: 720px) { .header { align-items:flex-start; } .form-row, .form-row-3, .chart-grid, .filter-grid { grid-template-columns: 1fr; } }
   .form-group { display: flex; flex-direction: column; gap: 5px; }
   .form-label { font-size: 12px; color: var(--muted); font-weight: 500; }
-  .form-input { padding: 9px 11px; font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); color: var(--text); font-family: inherit; transition: border-color 0.15s; }
-  .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,200,64,0.15); }
-  .save-btn { padding: 10px 20px; background: var(--accent); color: var(--accent-dark); border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; }
-  .save-btn:hover { opacity: 0.9; }
-  .save-msg { font-size: 13px; margin-left: 10px; }
+  .form-input, .form-select { padding: 9px 11px; font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); color: var(--text); font-family: inherit; transition: border-color 0.15s; width: 100%; }
+  .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,200,64,0.15); }
+  .btn-row { display:flex; align-items:center; gap: 8px; flex-wrap: wrap; }
+  .save-btn, .small-btn { padding: 10px 20px; background: var(--accent); color: var(--accent-dark); border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .small-btn { padding: 8px 12px; font-size: 12px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .small-btn:hover, .save-btn:hover { opacity: 0.9; }
+  .save-msg { font-size: 13px; color: var(--muted); }
   .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead th { text-align: left; padding: 10px 14px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 860px; }
+  thead th { text-align: left; padding: 10px 12px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: var(--surface2); }
-  .del-btn { background: none; border: none; cursor: pointer; color: var(--hint); font-size: 15px; padding: 2px 6px; border-radius: 4px; line-height: 1; }
-  .del-btn:hover { background: rgba(226,75,74,0.1); color: var(--danger); }
+  .table-input { width: 100%; min-width: 90px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); font-size: 12px; }
+  .table-actions { display:flex; gap:6px; white-space:nowrap; }
+  .icon-btn { background: var(--surface2); border: 1px solid var(--border); cursor: pointer; color: var(--muted); font-size: 12px; padding: 6px 8px; border-radius: 7px; }
+  .icon-btn:hover { border-color: var(--accent); color: var(--text); }
+  .danger:hover { background: rgba(226,75,74,0.1); color: var(--danger); border-color: rgba(226,75,74,0.25); }
   .empty { text-align: center; padding: 2.5rem; color: var(--muted); font-size: 14px; }
-  .banner { border-radius: var(--radius); padding: 10px 14px; font-size: 13px; margin-bottom: 1rem; line-height: 1.45; }
-  .info-banner { background: rgba(46,171,111,0.08); border: 1px solid rgba(46,171,111,0.2); color: var(--success); }
-  .ocr-box { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.4; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-top: 10px; max-height: 160px; overflow: auto; display: none; }
 </style>
 </head>
 <body>
@@ -82,13 +75,9 @@
   <div class="header">
     <div class="header-left">
       <div class="logo"><svg viewBox="0 0 24 24"><path d="M17 5H3C1.9 5 1 5.9 1 7v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-7 11H4v-2h6v2zm0-4H4v-2h6v2zm0-4H4V6h6v2zm8 2-2-2V5h-2v3l2 2v7.5c0 .83-.67 1.5-1.5 1.5S13 18.33 13 17.5V13H7v-2h8v3h.5c.83 0 1.5.67 1.5 1.5V18c0 2.21-1.79 4-4 4s-4-1.79-4-4v-1h2v1c0 1.1.9 2 2 2s2-.9 2-2v-3.5L18 10z"/></svg></div>
-      <div><div class="app-title">Gas Tracker</div><div class="app-sub">Log fill-ups · scan receipts · visualize trends</div></div>
+      <div><div class="app-title">Gas Tracker</div><div class="app-sub">Log fill-ups · cloud sync · visualize trends</div></div>
     </div>
-    <div class="top-actions">
-      <button class="export-btn" onclick="exportData()">Export</button>
-      <button class="export-btn" onclick="document.getElementById('import-input').click()">Import</button>
-      <input type="file" id="import-input" accept="application/json" onchange="importData(this)" />
-    </div>
+    <div class="sync-pill" id="sync-status">Checking sync…</div>
   </div>
 
   <div class="tabs">
@@ -98,7 +87,27 @@
   </div>
 
   <div id="tab-dashboard" class="panel active">
-    <div class="banner info-banner" id="sync-banner">No API key needed. Receipt scanning uses Tesseract.js OCR in your browser. Entries save to Supabase when configured; otherwise they save locally.</div>
+    <div class="banner info-banner" id="sync-banner">Entries save to Supabase and load across browsers/devices.</div>
+
+    <div class="filter-card">
+      <div class="section-title">Dashboard filters</div>
+      <div class="filter-grid">
+        <div class="form-group">
+          <label class="form-label">Gas station</label>
+          <select class="form-select" id="filter-station" onchange="renderAll()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <select class="form-select" id="filter-address" onchange="renderAll()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Month</label>
+          <input class="form-input" type="month" id="filter-month" onchange="renderAll()" />
+        </div>
+        <button class="small-btn" onclick="clearFilters()">Clear filters</button>
+      </div>
+    </div>
+
     <div class="metrics" id="metrics-row"></div>
     <div class="chart-card"><div class="section-title">Total spending per fill-up</div><div class="chart-wrap"><canvas id="chart-spending"></canvas></div></div>
     <div class="chart-grid">
@@ -109,114 +118,106 @@
 
   <div id="tab-log" class="panel">
     <div class="form-card">
-      <div class="section-title" style="margin-bottom:12px;">Scan receipt with OCR</div>
-      <div class="photo-zone" onclick="document.getElementById('photo-input').click()">
-        <div id="photo-preview-area"></div>
-        <div class="photo-icon">📷</div>
-        <div class="photo-zone-text">Tap to take a photo or upload a receipt</div>
-        <div class="photo-zone-hint">OCR will auto-fill the form below. Review before saving.</div>
-      </div>
-      <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)" />
-      <div id="analyzing-msg" style="display:none;" class="analyzing"><div class="spinner"></div> <span id="ocr-status">Reading receipt…</span></div>
-      <div id="ocr-text" class="ocr-box"></div>
-    </div>
-
-    <div class="form-card">
       <div class="section-title" style="margin-bottom:14px;">Fill-up details</div>
+      <datalist id="station-options"></datalist>
+      <datalist id="address-options"></datalist>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Gas station</label><input class="form-input" id="f-station" placeholder="e.g. Shell, Costco" /></div>
+        <div class="form-group"><label class="form-label">Gas station</label><input class="form-input" id="f-station" list="station-options" placeholder="e.g. Shell, Costco" /></div>
+        <div class="form-group"><label class="form-label">Address</label><input class="form-input" id="f-address" list="address-options" placeholder="e.g. 123 Main St" /></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="f-date" /></div>
+        <div class="form-group"><label class="form-label">Notes / receipt info</label><input class="form-input" id="f-notes" placeholder="optional" /></div>
       </div>
       <div class="form-row-3">
         <div class="form-group"><label class="form-label">Price / gallon ($)</label><input class="form-input" type="number" step="0.001" id="f-ppg" placeholder="3.499" oninput="calcTotal()" /></div>
         <div class="form-group"><label class="form-label">Gallons</label><input class="form-input" type="number" step="0.001" id="f-gallons" placeholder="12.500" oninput="calcTotal()" /></div>
         <div class="form-group"><label class="form-label">Total ($)</label><input class="form-input" type="number" step="0.01" id="f-total" placeholder="43.74" /></div>
       </div>
-      <div style="display:flex;align-items:center;"><button class="save-btn" onclick="addEntry()">Save fill-up</button><span class="save-msg" id="save-msg"></span></div>
+      <div class="btn-row"><button class="save-btn" onclick="addEntry()">Save fill-up</button><span class="save-msg" id="save-msg"></span></div>
     </div>
   </div>
 
   <div id="tab-history" class="panel">
     <div class="table-wrap">
-      <table><thead><tr><th>Date</th><th>Station</th><th>$/gal</th><th>Gallons</th><th>Total</th><th></th></tr></thead><tbody id="history-body"></tbody></table>
+      <table>
+        <thead><tr><th>Date</th><th>Station</th><th>Address</th><th>$/gal</th><th>Gallons</th><th>Total</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
       <div id="history-empty" class="empty" style="display:none;">No fill-ups yet — add your first one!</div>
     </div>
   </div>
 </div>
 
 <script>
-const STORAGE_KEY = 'gas-tracker-entries-v3';
+const STORAGE_KEY = 'gas-tracker-entries-v4';
 
-// Replace these with your Supabase values:
 // Supabase Dashboard -> Project Settings -> API
 const SUPABASE_URL = 'https://ykedfxitevfpioplirdy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZWRmeGl0ZXZmcGlvcGxpcmR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjQ4ODIsImV4cCI6MjA5MzA0MDg4Mn0.EmfBzmig_fkITR2Uw5MPxkjvFTzwlevkTzbUCKgwI5o';
 
-const supabaseReady =
-  !SUPABASE_URL.includes('PASTE_') &&
-  !SUPABASE_ANON_KEY.includes('PASTE_') &&
-  window.supabase;
+const supabaseReady = !SUPABASE_URL.includes('PASTE_') && !SUPABASE_ANON_KEY.includes('PASTE_') && window.supabase;
+const supabaseClient = supabaseReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-const supabaseClient = supabaseReady
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
-
-let entries = loadEntries();
+let entries = loadLocalEntries();
 let chartSpending, chartPPG, chartStations;
+let editingId = null;
 
-function loadEntries() {
+function loadLocalEntries() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('gas-tracker-entries-v2') || localStorage.getItem('gas-entries') || '[]';
+    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('gas-tracker-entries-v3') || localStorage.getItem('gas-entries') || '[]';
     const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed.map(normalizeEntry).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date)) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeEntry).filter(Boolean).sort(sortNewest) : [];
   } catch { return []; }
 }
+function saveLocalEntries() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+function sortNewest(a,b) { return String(b.date).localeCompare(String(a.date)) || String(b.created_at || '').localeCompare(String(a.created_at || '')); }
 function normalizeEntry(e) {
   const station = String(e?.station || '').trim();
+  const address = String(e?.address || '').trim();
   const date = String(e?.date || '').trim();
   const ppg = Number(e?.ppg), gallons = Number(e?.gallons), total = Number(e?.total);
+  const notes = String(e?.notes || '').trim();
   if (!station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) return null;
-  return { id: e.id || Date.now() + Math.random(), station, date, ppg, gallons, total };
+  return { id: e.id || crypto.randomUUID?.() || String(Date.now()), created_at: e.created_at || '', station, address, date, ppg, gallons, total, notes };
 }
-function saveEntries() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
 
 async function loadEntriesFromCloud() {
-  if (!supabaseClient) {
-    renderAll();
-    return;
-  }
-
+  setSyncStatus();
+  if (!supabaseClient) { renderAll(); return; }
   try {
     const { data, error } = await supabaseClient
       .from('gas_entries')
       .select('*')
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
-
     if (error) throw error;
-    entries = (data || []).map(normalizeEntry).filter(Boolean);
-    saveEntries();
+    entries = (data || []).map(normalizeEntry).filter(Boolean).sort(sortNewest);
+    saveLocalEntries();
     renderAll();
   } catch (err) {
     console.error('Supabase load failed:', err);
-    alert('Could not load from Supabase. Showing local data instead. Check your Supabase URL, anon key, table, and policies.');
+    document.getElementById('sync-banner').className = 'banner warning-banner';
+    document.getElementById('sync-banner').textContent = 'Could not load from Supabase. Check that your table has address and notes columns plus the correct policies.';
     renderAll();
   }
 }
-
 async function saveEntryToCloud(entry) {
   if (!supabaseClient) return false;
   const { error } = await supabaseClient.from('gas_entries').insert({
-    station: entry.station,
-    date: entry.date,
-    ppg: entry.ppg,
-    gallons: entry.gallons,
-    total: entry.total
+    station: entry.station, address: entry.address, date: entry.date, ppg: entry.ppg, gallons: entry.gallons, total: entry.total, notes: entry.notes
   });
   if (error) throw error;
   return true;
 }
-
+async function updateEntryInCloud(entry) {
+  if (!supabaseClient) return false;
+  const { error } = await supabaseClient.from('gas_entries').update({
+    station: entry.station, address: entry.address, date: entry.date, ppg: entry.ppg, gallons: entry.gallons, total: entry.total, notes: entry.notes
+  }).eq('id', entry.id);
+  if (error) throw error;
+  return true;
+}
 async function deleteEntryFromCloud(id) {
   if (!supabaseClient) return false;
   const { error } = await supabaseClient.from('gas_entries').delete().eq('id', id);
@@ -224,6 +225,10 @@ async function deleteEntryFromCloud(id) {
   return true;
 }
 
+function setSyncStatus() {
+  document.getElementById('sync-status').textContent = supabaseClient ? 'Cloud sync on' : 'Local only';
+  document.getElementById('sync-banner').textContent = supabaseClient ? 'Cloud sync is on. Entries save to Supabase and load across browsers/devices.' : 'Cloud sync is off. Entries save only in this browser.';
+}
 function switchTab(name) {
   const names = ['dashboard','log','history'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
@@ -231,88 +236,140 @@ function switchTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'dashboard') renderCharts();
 }
-function calcTotal() {
-  const p = parseFloat(document.getElementById('f-ppg').value);
-  const g = parseFloat(document.getElementById('f-gallons').value);
-  if (!Number.isNaN(p) && !Number.isNaN(g)) document.getElementById('f-total').value = (p * g).toFixed(2);
+function calcTotal(prefix = 'f') {
+  const p = parseFloat(document.getElementById(`${prefix}-ppg`).value);
+  const g = parseFloat(document.getElementById(`${prefix}-gallons`).value);
+  if (!Number.isNaN(p) && !Number.isNaN(g)) document.getElementById(`${prefix}-total`).value = (p * g).toFixed(2);
 }
 async function addEntry() {
-  const station = document.getElementById('f-station').value.trim();
-  const date = document.getElementById('f-date').value;
-  const ppg = parseFloat(document.getElementById('f-ppg').value);
-  const gallons = parseFloat(document.getElementById('f-gallons').value);
-  const total = parseFloat(document.getElementById('f-total').value);
-  if (!station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) { showMsg('Please fill in all fields.', true); return; }
-
-  const entry = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), station, date, ppg, gallons, total };
-
+  const entry = readFormEntry('f');
+  if (!entry) { showMsg('Please fill in station, date, price, gallons, and total.', true); return; }
+  entry.id = crypto.randomUUID?.() || String(Date.now());
   try {
     if (supabaseClient) {
       await saveEntryToCloud(entry);
       await loadEntriesFromCloud();
       showMsg('Saved to Supabase!');
     } else {
-      entries.unshift(entry);
-      entries.sort((a,b) => b.date.localeCompare(a.date));
-      saveEntries(); renderAll();
-      showMsg('Saved locally. Add Supabase keys to sync across devices.');
+      entries.unshift(entry); entries.sort(sortNewest); saveLocalEntries(); renderAll(); showMsg('Saved locally.');
     }
-    ['f-station','f-ppg','f-gallons','f-total'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+    clearAddForm();
   } catch (err) {
     console.error('Save failed:', err);
-    showMsg('Could not save to Supabase.', true);
+    showMsg('Could not save. Check Supabase table columns and policies.', true);
   }
+}
+function readFormEntry(prefix, existingId = null) {
+  const station = document.getElementById(`${prefix}-station`).value.trim();
+  const address = document.getElementById(`${prefix}-address`).value.trim();
+  const date = document.getElementById(`${prefix}-date`).value;
+  const ppg = parseFloat(document.getElementById(`${prefix}-ppg`).value);
+  const gallons = parseFloat(document.getElementById(`${prefix}-gallons`).value);
+  const total = parseFloat(document.getElementById(`${prefix}-total`).value);
+  const notes = document.getElementById(`${prefix}-notes`)?.value.trim() || '';
+  if (!station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) return null;
+  return { id: existingId, station, address, date, ppg, gallons, total, notes };
+}
+function clearAddForm() {
+  ['f-station','f-address','f-ppg','f-gallons','f-total','f-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 }
 function showMsg(msg, err = false) {
   const el = document.getElementById('save-msg'); el.textContent = msg; el.style.color = err ? 'var(--danger)' : 'var(--success)';
-  setTimeout(() => { el.textContent = ''; }, 2500);
+  setTimeout(() => { el.textContent = ''; }, 3000);
 }
 async function deleteEntry(id) {
   if (!confirm('Delete this fill-up?')) return;
-
   try {
-    if (supabaseClient) {
-      await deleteEntryFromCloud(id);
-      await loadEntriesFromCloud();
-    } else {
-      entries = entries.filter(e => String(e.id) !== String(id));
-      saveEntries();
-      renderAll();
-    }
-  } catch (err) {
-    console.error('Delete failed:', err);
-    alert('Could not delete from Supabase. Check your table policies.');
-  }
+    if (supabaseClient) { await deleteEntryFromCloud(id); await loadEntriesFromCloud(); }
+    else { entries = entries.filter(e => String(e.id) !== String(id)); saveLocalEntries(); renderAll(); }
+  } catch (err) { console.error('Delete failed:', err); alert('Could not delete from Supabase. Check policies.'); }
 }
-function renderAll() { renderMetrics(); renderHistory(); renderCharts(); }
+function startEdit(id) { editingId = id; renderHistory(); }
+function cancelEdit() { editingId = null; renderHistory(); }
+async function saveEdit(id) {
+  const edited = readFormEntry('e', id);
+  if (!edited) { alert('Please fill in all required fields.'); return; }
+  try {
+    if (supabaseClient) { await updateEntryInCloud(edited); editingId = null; await loadEntriesFromCloud(); }
+    else { entries = entries.map(e => String(e.id) === String(id) ? { ...e, ...edited } : e).sort(sortNewest); editingId = null; saveLocalEntries(); renderAll(); }
+  } catch (err) { console.error('Update failed:', err); alert('Could not update entry. Check Supabase update policy and table columns.'); }
+}
+function getFilteredEntries() {
+  const station = document.getElementById('filter-station')?.value || '';
+  const address = document.getElementById('filter-address')?.value || '';
+  const month = document.getElementById('filter-month')?.value || '';
+  return entries.filter(e => (!station || e.station === station) && (!address || e.address === address) && (!month || e.date.startsWith(month)));
+}
+function clearFilters() {
+  document.getElementById('filter-station').value = '';
+  document.getElementById('filter-address').value = '';
+  document.getElementById('filter-month').value = '';
+  renderAll();
+}
+function renderAll() { renderSuggestions(); renderFilters(); renderMetrics(); renderHistory(); renderCharts(); }
+function uniqueByRecent(key) {
+  const seen = new Set();
+  return [...entries].sort(sortNewest).map(e => e[key]).filter(v => { const value = String(v || '').trim(); if (!value || seen.has(value)) return false; seen.add(value); return true; });
+}
+function renderSuggestions() {
+  document.getElementById('station-options').innerHTML = uniqueByRecent('station').map(v => `<option value="${escapeHtml(v)}"></option>`).join('');
+  document.getElementById('address-options').innerHTML = uniqueByRecent('address').map(v => `<option value="${escapeHtml(v)}"></option>`).join('');
+}
+function renderFilters() {
+  const stationEl = document.getElementById('filter-station');
+  const addressEl = document.getElementById('filter-address');
+  const currentStation = stationEl.value;
+  const currentAddress = addressEl.value;
+  stationEl.innerHTML = '<option value="">All stations</option>' + uniqueByRecent('station').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  addressEl.innerHTML = '<option value="">All addresses</option>' + uniqueByRecent('address').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  stationEl.value = currentStation;
+  addressEl.value = currentAddress;
+}
 function renderMetrics() {
+  const data = getFilteredEntries();
   const el = document.getElementById('metrics-row');
-  if (!entries.length) { el.innerHTML = '<div class="metric"><div class="metric-label">No data yet</div><div class="metric-value" style="font-size:15px;">Add your first fill-up</div></div>'; return; }
-  const totalSpend = entries.reduce((s,e) => s + e.total, 0);
-  const avgPPG = entries.reduce((s,e) => s + e.ppg, 0) / entries.length;
-  const totalGal = entries.reduce((s,e) => s + e.gallons, 0);
-  const last = [...entries].sort((a,b) => b.date.localeCompare(a.date))[0];
+  if (!data.length) { el.innerHTML = '<div class="metric"><div class="metric-label">No matching data</div><div class="metric-value" style="font-size:15px;">Try another filter</div></div>'; return; }
+  const totalSpend = data.reduce((s,e) => s + e.total, 0);
+  const avgPPG = data.reduce((s,e) => s + e.ppg, 0) / data.length;
+  const totalGal = data.reduce((s,e) => s + e.gallons, 0);
+  const last = [...data].sort(sortNewest)[0];
   el.innerHTML = `
-    <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${entries.length} fill-up${entries.length !== 1 ? 's' : ''}</div></div>
+    <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${data.length} fill-up${data.length !== 1 ? 's' : ''}</div></div>
     <div class="metric"><div class="metric-label">Avg price / gal</div><div class="metric-value">$${avgPPG.toFixed(3)}</div></div>
     <div class="metric"><div class="metric-label">Total gallons</div><div class="metric-value">${totalGal.toFixed(1)}</div></div>
-    <div class="metric"><div class="metric-label">Last fill-up</div><div class="metric-value" style="font-size:15px;">${escapeHtml(last.station)}</div><div class="metric-sub">${last.date}</div></div>`;
+    <div class="metric"><div class="metric-label">Last matching fill-up</div><div class="metric-value" style="font-size:15px;">${escapeHtml(last.station)}</div><div class="metric-sub">${escapeHtml(last.date)}</div></div>`;
 }
 function renderHistory() {
   const tbody = document.getElementById('history-body'), empty = document.getElementById('history-empty');
   if (!entries.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
-  tbody.innerHTML = entries.map(e => `<tr><td>${escapeHtml(e.date)}</td><td>${escapeHtml(e.station)}</td><td>$${e.ppg.toFixed(3)}</td><td>${e.gallons.toFixed(3)}</td><td>$${e.total.toFixed(2)}</td><td><button class="del-btn" onclick="deleteEntry('${e.id}')">✕</button></td></tr>`).join('');
+  tbody.innerHTML = entries.map(e => String(e.id) === String(editingId) ? editRow(e) : displayRow(e)).join('');
+}
+function displayRow(e) {
+  return `<tr><td>${escapeHtml(e.date)}</td><td>${escapeHtml(e.station)}</td><td>${escapeHtml(e.address)}</td><td>$${e.ppg.toFixed(3)}</td><td>${e.gallons.toFixed(3)}</td><td>$${e.total.toFixed(2)}</td><td>${escapeHtml(e.notes)}</td><td><div class="table-actions"><button class="icon-btn" onclick="startEdit('${e.id}')">Edit</button><button class="icon-btn danger" onclick="deleteEntry('${e.id}')">Delete</button></div></td></tr>`;
+}
+function editRow(e) {
+  return `<tr>
+    <td><input class="table-input" id="e-date" type="date" value="${escapeHtml(e.date)}"></td>
+    <td><input class="table-input" id="e-station" list="station-options" value="${escapeHtml(e.station)}"></td>
+    <td><input class="table-input" id="e-address" list="address-options" value="${escapeHtml(e.address)}"></td>
+    <td><input class="table-input" id="e-ppg" type="number" step="0.001" value="${e.ppg}" oninput="calcTotal('e')"></td>
+    <td><input class="table-input" id="e-gallons" type="number" step="0.001" value="${e.gallons}" oninput="calcTotal('e')"></td>
+    <td><input class="table-input" id="e-total" type="number" step="0.01" value="${e.total}"></td>
+    <td><input class="table-input" id="e-notes" value="${escapeHtml(e.notes)}"></td>
+    <td><div class="table-actions"><button class="icon-btn" onclick="saveEdit('${e.id}')">Save</button><button class="icon-btn" onclick="cancelEdit()">Cancel</button></div></td>
+  </tr>`;
 }
 function renderCharts() {
   if (chartSpending) chartSpending.destroy(); if (chartPPG) chartPPG.destroy(); if (chartStations) chartStations.destroy();
-  if (!entries.length) return;
-  const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+  const data = getFilteredEntries();
+  if (!data.length) return;
+  const sorted = [...data].sort((a,b) => a.date.localeCompare(b.date));
   const labels = sorted.map(e => e.date.slice(5));
   const totals = sorted.map(e => Number(e.total.toFixed(2)));
   const ppgs = sorted.map(e => Number(e.ppg.toFixed(3)));
-  const stationMap = {}; entries.forEach(e => { stationMap[e.station] = (stationMap[e.station] || 0) + e.gallons; });
+  const stationMap = {}; data.forEach(e => { stationMap[e.station] = (stationMap[e.station] || 0) + e.gallons; });
   const stationLabels = Object.keys(stationMap), stationData = stationLabels.map(k => Number(stationMap[k].toFixed(2)));
   const dark = matchMedia('(prefers-color-scheme:dark)').matches, grid = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', tick = dark ? '#999' : '#777';
   const base = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:grid},ticks:{color:tick,font:{size:11},autoSkip:true,maxTicksLimit:8}}, y:{grid:{color:grid},ticks:{color:tick,font:{size:11}},beginAtZero:false} } };
@@ -321,115 +378,9 @@ function renderCharts() {
   const palette = ['#e8c840','#1a6eb5','#e05a2b','#2eab6f','#9b5de5','#f4845f'];
   chartStations = new Chart(document.getElementById('chart-stations'), { type:'doughnut', data:{labels:stationLabels,datasets:[{data:stationData,backgroundColor:stationLabels.map((_,i)=>palette[i%palette.length]),borderWidth:2,borderColor:dark?'#1c1c1f':'#fff'}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tick,font:{size:11},boxWidth:10,padding:8}}}} });
 }
-
-async function handlePhoto(input) {
-  const file = input.files?.[0]; if (!file) return;
-  document.getElementById('photo-preview-area').innerHTML = `<img src="${URL.createObjectURL(file)}" class="photo-preview" alt="Receipt preview" />`;
-  document.getElementById('analyzing-msg').style.display = 'flex';
-  document.getElementById('ocr-status').textContent = 'Reading receipt…';
-  const ocrBox = document.getElementById('ocr-text'); ocrBox.style.display = 'none'; ocrBox.textContent = '';
-  try {
-    const result = await Tesseract.recognize(file, 'eng', {
-      logger: m => {
-        if (m.status === 'recognizing text') document.getElementById('ocr-status').textContent = `Reading receipt… ${Math.round((m.progress || 0) * 100)}%`;
-      }
-    });
-    const text = result?.data?.text || '';
-    const parsed = parseReceiptText(text);
-    ocrBox.textContent = text.trim() || 'No text detected.';
-    ocrBox.style.display = 'block';
-    if (parsed.station) document.getElementById('f-station').value = parsed.station;
-    if (parsed.date) document.getElementById('f-date').value = parsed.date;
-    if (parsed.ppg) document.getElementById('f-ppg').value = parsed.ppg;
-    if (parsed.gallons) document.getElementById('f-gallons').value = parsed.gallons;
-    if (parsed.total) document.getElementById('f-total').value = parsed.total;
-    else calcTotal();
-    showMsg('OCR complete. Review and save.');
-  } catch (err) {
-    console.error(err);
-    alert('Could not read the receipt with OCR. Try cropping closer, better lighting, or enter it manually.');
-  } finally {
-    document.getElementById('analyzing-msg').style.display = 'none';
-    input.value = '';
-  }
-}
-
-function parseReceiptText(text) {
-  const clean = text.replace(/\r/g, '').replace(/[|]/g, 'I');
-  const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
-  const upper = clean.toUpperCase();
-  let station = '';
-  const firstUseful = lines.find(l => /SHELL|EXXON|MOBIL|BP|SUNOCO|WAWA|COSTCO|BJ|BJS|WHOLESALE|CHEVRON|TEXACO|CITGO|GULF|VALERO|MARATHON/i.test(l));
-  if (firstUseful) station = firstUseful.replace(/B J'?S/i, "BJ's").replace(/\s+/g, ' ');
-  if (!station && lines.length) station = lines[0].replace(/\s+/g, ' ');
-
-  let date = findDate(clean);
-  let ppg = findMoneyNumber(upper, /(PRICE\s*\/\s*GAL|PRICE\s*GAL|PRICE\/GAL|P\/G|PPG)\s*[:$]?\s*\$?\s*([0-9][0-9.,]*)/i);
-  let gallons = findMoneyNumber(upper, /(QTY\s*\/\s*GAL|QTY\s*GAL|QTY\/GAL|GALLONS?|GAL)\s*[:]?\s*([0-9][0-9.,]*)/i);
-  let total = findMoneyNumber(upper, /(FUEL\s*TOTAL|TOTAL\s*FUEL|TOTAL|AMOUNT)\s*[:$]?\s*\$?\s*([0-9][0-9.,]*)/i);
-
-  // Fallbacks for common receipt OCR layouts.
-  if (!ppg) ppg = pickNearbyNumber(lines, /PRICE/i);
-  if (!gallons) gallons = pickNearbyNumber(lines, /QTY|GALLON|GAL/i);
-  if (!total) total = pickNearbyNumber(lines, /TOTAL/i);
-
-  // Avoid using a card total/ref number as gas total if it is huge.
-  if (total && Number(total) > 300) total = '';
-
-  return { station, date, ppg, gallons, total };
-}
-function findMoneyNumber(text, regex) {
-  const m = text.match(regex); if (!m) return '';
-  return normalizeNumber(m[2] || m[1]);
-}
-function pickNearbyNumber(lines, labelRegex) {
-  for (const line of lines) {
-    if (!labelRegex.test(line)) continue;
-    const nums = line.match(/[0-9]+[.,][0-9]+|[0-9]+/g);
-    if (nums?.length) return normalizeNumber(nums[nums.length - 1]);
-  }
-  return '';
-}
-function normalizeNumber(value) {
-  if (!value) return '';
-  const n = String(value).replace(/[^0-9.]/g, '');
-  const parsed = Number(n);
-  return Number.isFinite(parsed) ? String(parsed) : '';
-}
-function findDate(text) {
-  const m = text.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
-  if (!m) return '';
-  let month = Number(m[1]), day = Number(m[2]), year = Number(m[3]);
-  if (year < 100) year += 2000;
-  if (month < 1 || month > 12 || day < 1 || day > 31) return '';
-  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-}
-
-function exportData() {
-  const backup = { app:'Gas Tracker', version:3, exportedAt:new Date().toISOString(), entries };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gas-tracker-backup.json'; document.body.appendChild(a); a.click(); a.remove();
-}
-async function importData(input) {
-  const file = input.files?.[0]; if (!file) return;
-  try {
-    const parsed = JSON.parse(await file.text());
-    const imported = Array.isArray(parsed) ? parsed : parsed.entries;
-    if (!Array.isArray(imported)) throw new Error('No entries found');
-    const cleaned = imported.map(normalizeEntry).filter(Boolean);
-    if (!cleaned.length) throw new Error('No valid entries found');
-    const replace = confirm('Replace current data? Press Cancel to merge imported data with current data.');
-    entries = replace ? cleaned : [...entries, ...cleaned];
-    entries.sort((a,b) => b.date.localeCompare(a.date)); saveEntries(); renderAll(); alert('Import complete.');
-  } catch (err) { console.error(err); alert('Could not import that file. Make sure it is a Gas Tracker JSON backup.'); }
-  finally { input.value = ''; }
-}
 function escapeHtml(value) { return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-document.getElementById('sync-banner').textContent = supabaseClient
-  ? 'Cloud sync is on. Entries save to Supabase and load across browsers/devices.'
-  : 'Cloud sync is off. Add your Supabase URL and anon key in the code to sync across devices.';
 loadEntriesFromCloud();
 </script>
 </body>
