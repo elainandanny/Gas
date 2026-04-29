@@ -7,6 +7,21 @@
 <link rel="stylesheet" href="styles.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  .hidden { display: none !important; }
+  .filter-card.collapsed .filter-grid { display: none; }
+  .filter-card .filter-header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .filter-card .filter-toggle { white-space:nowrap; }
+  .filter-grid { align-items:end; }
+  .range-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .form-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .address-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  @media (max-width:640px) {
+    .range-grid, .form-grid-2, .address-grid-2 { grid-template-columns:1fr; }
+  }
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -54,8 +69,11 @@
     <div id="tab-dashboard" class="panel active">
       <div class="banner info-banner" id="sync-banner">Entries save to Supabase and are private to your login.</div>
 
-      <div class="filter-card">
-        <div class="section-title">Dashboard filters</div>
+      <div class="filter-card collapsed" id="dashboard-filter-card">
+        <div class="filter-header">
+          <div class="section-title">Dashboard filters</div>
+          <button class="small-btn filter-toggle" id="filter-toggle-btn" onclick="toggleDashboardFilters()">Expand filters</button>
+        </div>
         <div class="filter-grid">
           <div class="form-group">
             <label class="form-label">Brand</label>
@@ -66,8 +84,11 @@
             <select class="form-select" id="filter-station" onchange="renderAll()"></select>
           </div>
           <div class="form-group">
-            <label class="form-label">Month</label>
-            <input class="form-input" type="month" id="filter-month" onchange="renderAll()" />
+            <label class="form-label">Month range</label>
+            <div class="range-grid">
+              <input class="form-input" type="month" id="filter-month-start" onchange="renderAll()" aria-label="Start month" />
+              <input class="form-input" type="month" id="filter-month-end" onchange="renderAll()" aria-label="End month" />
+            </div>
           </div>
           <button class="small-btn" onclick="clearFilters()">Clear filters</button>
         </div>
@@ -75,12 +96,12 @@
 
       <div class="metrics" id="metrics-row"></div>
       <div class="chart-card">
-        <div class="section-title">Total spending per fill-up</div>
+        <div class="section-title">Total spend over time</div>
         <div class="chart-wrap"><canvas id="chart-spending"></canvas></div>
       </div>
       <div class="chart-grid">
         <div class="chart-card">
-          <div class="section-title">Price per gallon</div>
+          <div class="section-title">Price per gallon over time</div>
           <div class="chart-wrap-sm"><canvas id="chart-ppg"></canvas></div>
         </div>
         <div class="chart-card">
@@ -98,16 +119,16 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Gas Station / Brand</label>
+            <label class="form-label">Brand</label>
             <input class="form-input" id="f-brand" list="brand-options" placeholder="e.g. BJ's, Shell, Costco" />
           </div>
           <div class="form-group">
-            <label class="form-label">Nickname / Station</label>
+            <label class="form-label">Station</label>
             <input class="form-input" id="f-station" list="station-options" placeholder="e.g. BJ Route 10" oninput="autofillStationAddress()" onchange="autofillStationAddress()" />
           </div>
         </div>
 
-        <div class="form-row-3">
+        <div class="form-grid-2">
           <div class="form-group">
             <label class="form-label">Date</label>
             <input class="form-input" type="date" id="f-date" />
@@ -120,9 +141,6 @@
             <label class="form-label">Gallons</label>
             <input class="form-input" type="number" step="0.001" id="f-gallons" placeholder="12.500" oninput="calcTotal()" />
           </div>
-        </div>
-
-        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Total ($)</label>
             <input class="form-input" type="number" step="0.01" id="f-total" placeholder="43.74" />
@@ -130,7 +148,7 @@
         </div>
 
         <div class="section-title" style="margin-top:16px;">Address</div>
-        <div class="form-row-4">
+        <div class="address-grid-2">
           <div class="form-group">
             <label class="form-label">Address 1</label>
             <input class="form-input" id="f-address1" placeholder="831 State Route 10" />
@@ -516,23 +534,39 @@ async function saveEdit(id) {
   }
 }
 
+function getSelectedMonthRange() {
+  const start = document.getElementById('filter-month-start')?.value || '';
+  const end = document.getElementById('filter-month-end')?.value || '';
+  return { start: start && end && start > end ? end : start, end: start && end && start > end ? start : end };
+}
+
 function getFilteredEntries() {
   const brand = document.getElementById('filter-brand')?.value || '';
   const station = document.getElementById('filter-station')?.value || '';
-  const month = document.getElementById('filter-month')?.value || '';
+  const { start, end } = getSelectedMonthRange();
 
-  return entries.filter(e =>
-    (!brand || e.brand === brand) &&
-    (!station || e.station === station) &&
-    (!month || e.date.startsWith(month))
-  );
+  return entries.filter(e => {
+    const entryMonth = e.date.slice(0, 7);
+    return (!brand || e.brand === brand) &&
+      (!station || e.station === station) &&
+      (!start || entryMonth >= start) &&
+      (!end || entryMonth <= end);
+  });
 }
 
 function clearFilters() {
   document.getElementById('filter-brand').value = '';
   document.getElementById('filter-station').value = '';
-  document.getElementById('filter-month').value = '';
+  document.getElementById('filter-month-start').value = '';
+  document.getElementById('filter-month-end').value = '';
   renderAll();
+}
+
+function toggleDashboardFilters() {
+  const card = document.getElementById('dashboard-filter-card');
+  const btn = document.getElementById('filter-toggle-btn');
+  const collapsed = card.classList.toggle('collapsed');
+  btn.textContent = collapsed ? 'Expand filters' : 'Hide filters';
 }
 
 function renderAll() {
@@ -681,6 +715,68 @@ function editRow(e) {
   `;
 }
 
+
+function parseLocalDate(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day || 1);
+}
+
+function monthKey(dateString) {
+  return dateString.slice(0, 7);
+}
+
+function weekKey(dateString) {
+  const date = parseLocalDate(dateString);
+  const day = date.getDay();
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - ((day + 6) % 7));
+  return monday.toISOString().slice(0, 10);
+}
+
+function monthLabel(key) {
+  const [year, month] = key.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+}
+
+function weekLabel(key) {
+  const start = parseLocalDate(key);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}–${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+}
+
+function monthsBetween(start, end) {
+  if (!start || !end) return Infinity;
+  const [sy, sm] = start.split('-').map(Number);
+  const [ey, em] = end.split('-').map(Number);
+  return (ey - sy) * 12 + (em - sm) + 1;
+}
+
+function getTimeBucket(dateString) {
+  const { start, end } = getSelectedMonthRange();
+  const useWeeks = Number.isFinite(monthsBetween(start, end)) && monthsBetween(start, end) <= 2;
+  const key = useWeeks ? weekKey(dateString) : monthKey(dateString);
+  return { key, label: useWeeks ? weekLabel(key) : monthLabel(key) };
+}
+
+function groupByTime(data) {
+  const buckets = new Map();
+  data.forEach(e => {
+    const bucket = getTimeBucket(e.date);
+    if (!buckets.has(bucket.key)) buckets.set(bucket.key, { key: bucket.key, label: bucket.label, total: 0, ppgWeighted: 0, gallons: 0 });
+    const item = buckets.get(bucket.key);
+    item.total += e.total;
+    item.gallons += e.gallons;
+    item.ppgWeighted += e.ppg * e.gallons;
+  });
+
+  return [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key)).map(item => ({
+    ...item,
+    total: Number(item.total.toFixed(2)),
+    avgPpg: item.gallons ? Number((item.ppgWeighted / item.gallons).toFixed(3)) : 0
+  }));
+}
+
 function renderCharts() {
   if (chartSpending) chartSpending.destroy();
   if (chartPPG) chartPPG.destroy();
@@ -689,10 +785,10 @@ function renderCharts() {
   const data = getFilteredEntries();
   if (!data.length) return;
 
-  const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
-  const labels = sorted.map(e => e.date.slice(5));
-  const totals = sorted.map(e => Number(e.total.toFixed(2)));
-  const ppgs = sorted.map(e => Number(e.ppg.toFixed(3)));
+  const grouped = groupByTime(data);
+  const labels = grouped.map(item => item.label);
+  const totals = grouped.map(item => item.total);
+  const ppgs = grouped.map(item => item.avgPpg);
 
   const brandMap = {};
   data.forEach(e => {
