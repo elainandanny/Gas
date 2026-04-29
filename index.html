@@ -16,14 +16,24 @@
   .filter-grid { align-items:end; }
   .range-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
   .form-grid-2,
-  .address-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:start; }
+  .address-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; row-gap:12px; align-items:start; }
   .form-grid-2 .form-group,
   .address-grid-2 .form-group,
-  .range-grid .form-input { min-width:0; }
+  .range-grid .form-input { min-width:0; overflow:hidden; }
   .form-grid-2 .form-input,
   .address-grid-2 .form-input,
   .range-grid .form-input { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
-  .form-grid-2 input[type="date"] { font-size:16px; padding-left:10px; padding-right:8px; text-align:left; }
+  .form-grid-2 input[type="date"] { -webkit-appearance:none; appearance:none; display:block; font-size:14px; padding-left:6px; padding-right:6px; text-align:center; min-width:0; overflow:hidden; }
+  .quick-select { margin-top:8px; }
+  .chart-controls, .map-controls, .history-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+  .history-controls { margin:0 0 14px; }
+  .chart-title-row, .map-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .inline-control { max-width:180px; }
+  .map-stats { margin-top:10px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .map-stat { border:1px solid rgba(0,0,0,0.08); border-radius:12px; padding:10px; background:rgba(255,255,255,0.7); }
+  .map-stat-label { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#777; }
+  .map-stat-value { font-weight:700; font-size:15px; margin-top:3px; }
+  .history-filter-card { margin-bottom:14px; }
   .map-card { margin-top:16px; }
   .station-map-frame { width:100%; height:280px; border:0; border-radius:16px; background:rgba(0,0,0,0.04); }
   .station-map-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
@@ -32,11 +42,14 @@
   @media (max-width:640px) {
     .range-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
     .form-grid-2,
-    .address-grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .address-grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; row-gap:12px; }
     .form-grid-2 .form-label,
     .address-grid-2 .form-label { font-size:13px; line-height:1.2; }
     .form-grid-2 .form-input,
-    .address-grid-2 .form-input { font-size:16px; padding-left:10px; padding-right:8px; }
+    .address-grid-2 .form-input { font-size:16px; padding-left:10px; padding-right:8px; min-width:0; }
+    .form-grid-2 input[type="date"] { font-size:13px; padding-left:4px; padding-right:4px; text-align:center; }
+    .chart-controls, .map-controls, .history-controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .map-stats { grid-template-columns:1fr; }
     .station-map-frame { height:240px; }
   }
 </style>
@@ -109,6 +122,14 @@
               <input class="form-input" type="month" id="filter-month-end" onchange="renderAll()" aria-label="End month" />
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label">Chart x-axis</label>
+            <select class="form-select" id="filter-time-view" onchange="renderCharts()">
+              <option value="week">Week</option>
+              <option value="month" selected>Month</option>
+              <option value="year">Year</option>
+            </select>
+          </div>
           <button class="small-btn" onclick="clearFilters()">Clear filters</button>
         </div>
       </div>
@@ -129,8 +150,21 @@
         </div>
       </div>
       <div class="chart-card map-card">
-        <div class="section-title">Station map</div>
+        <div class="map-title-row">
+          <div class="section-title">Station map</div>
+        </div>
+        <div class="map-controls">
+          <div class="form-group">
+            <label class="form-label">Map brand</label>
+            <select class="form-select" id="map-brand" onchange="selectedMapStation=''; renderStationMap()"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Map station</label>
+            <select class="form-select" id="map-station" onchange="setMapStation(this.value)"></select>
+          </div>
+        </div>
         <iframe id="station-map" class="station-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <div class="map-stats" id="station-map-stats"></div>
         <div class="station-map-list" id="station-map-list"></div>
       </div>
     </div>
@@ -145,10 +179,16 @@
           <div class="form-group">
             <label class="form-label">Brand</label>
             <input class="form-input" id="f-brand" list="brand-options" placeholder="e.g. BJ's, Shell, Costco" />
+            <select class="form-select quick-select" id="f-brand-picker" onchange="chooseSuggestion('brand', this.value)">
+              <option value="">Select recent brand...</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">Station</label>
             <input class="form-input" id="f-station" list="station-options" placeholder="e.g. BJ Route 10" oninput="autofillStationAddress()" onchange="autofillStationAddress()" />
+            <select class="form-select quick-select" id="f-station-picker" onchange="chooseSuggestion('station', this.value)">
+              <option value="">Select recent station...</option>
+            </select>
           </div>
         </div>
 
@@ -193,12 +233,25 @@
 
         <div class="btn-row">
           <button class="save-btn" onclick="addEntry()">Save fill-up</button>
+          <button class="small-btn" type="button" onclick="resetAddDetails()">Reset details</button>
           <span class="save-msg" id="save-msg"></span>
         </div>
       </div>
     </div>
 
     <div id="tab-history" class="panel">
+      <div class="filter-card history-filter-card">
+        <div class="section-title" style="margin-bottom:12px;">History filters</div>
+        <div class="history-controls">
+          <div class="form-group"><label class="form-label">Brand</label><select class="form-select" id="history-brand" onchange="renderHistory()"></select></div>
+          <div class="form-group"><label class="form-label">Station</label><select class="form-select" id="history-station" onchange="renderHistory()"></select></div>
+          <div class="form-group"><label class="form-label">From</label><input class="form-input" type="date" id="history-date-start" onchange="renderHistory()" /></div>
+          <div class="form-group"><label class="form-label">To</label><input class="form-input" type="date" id="history-date-end" onchange="renderHistory()" /></div>
+          <div class="form-group"><label class="form-label">Sort by</label><select class="form-select" id="history-sort" onchange="renderHistory()"><option value="date">Date</option><option value="brand">Brand</option><option value="station">Station</option><option value="ppg">$/gal</option><option value="gallons">Gallons</option><option value="total">Total</option></select></div>
+          <div class="form-group"><label class="form-label">Direction</label><select class="form-select" id="history-direction" onchange="renderHistory()"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
+        </div>
+        <button class="small-btn" type="button" onclick="clearHistoryFilters()">Reset history filters</button>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -508,8 +561,24 @@ function readFormEntry(prefix, existingId = null) {
 function clearAddForm() {
   ['f-brand', 'f-station', 'f-ppg', 'f-gallons', 'f-total', 'f-address1', 'f-city', 'f-state', 'f-zip']
     .forEach(id => document.getElementById(id).value = '');
+  ['f-brand-picker', 'f-station-picker'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+}
+
+function resetAddDetails() {
+  clearAddForm();
+  showMsg('Details reset.');
+}
+
+function chooseSuggestion(type, value) {
+  if (!value) return;
+  if (type === 'brand') {
+    document.getElementById('f-brand').value = value;
+  } else if (type === 'station') {
+    document.getElementById('f-station').value = value;
+    autofillStationAddress();
+  }
 }
 
 function showMsg(msg, err = false) {
@@ -584,6 +653,8 @@ function clearFilters() {
   document.getElementById('filter-station').value = '';
   document.getElementById('filter-month-start').value = '';
   document.getElementById('filter-month-end').value = '';
+  document.getElementById('filter-time-view').value = 'month';
+  selectedMapStation = '';
   renderAll();
 }
 
@@ -597,6 +668,7 @@ function toggleDashboardFilters() {
 function renderAll() {
   renderSuggestions();
   renderFilters();
+  renderHistoryFilterOptions();
   renderMetrics();
   renderHistory();
   renderCharts();
@@ -633,6 +705,13 @@ function renderSuggestions() {
 
   document.getElementById('station-options').innerHTML =
     uniqueByRecent('station').map(v => `<option value="${escapeHtml(v)}"></option>`).join('');
+
+  const brandPicker = document.getElementById('f-brand-picker');
+  const stationPicker = document.getElementById('f-station-picker');
+  if (brandPicker) brandPicker.innerHTML = '<option value="">Select recent brand...</option>' +
+    uniqueByRecent('brand').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  if (stationPicker) stationPicker.innerHTML = '<option value="">Select recent station...</option>' +
+    uniqueByRecent('station').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 }
 
 function renderFilters() {
@@ -688,18 +767,56 @@ function renderMetrics() {
   `;
 }
 
+function renderHistoryFilterOptions() {
+  const brandEl = document.getElementById('history-brand');
+  const stationEl = document.getElementById('history-station');
+  if (!brandEl || !stationEl) return;
+  const currentBrand = brandEl.value;
+  const currentStation = stationEl.value;
+  brandEl.innerHTML = '<option value="">All brands</option>' + uniqueByRecent('brand').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  stationEl.innerHTML = '<option value="">All stations</option>' + uniqueByRecent('station').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  brandEl.value = currentBrand;
+  stationEl.value = currentStation;
+}
+
+function clearHistoryFilters() {
+  ['history-brand', 'history-station', 'history-date-start', 'history-date-end'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('history-sort').value = 'date';
+  document.getElementById('history-direction').value = 'desc';
+  renderHistory();
+}
+
+function getHistoryEntries() {
+  const brand = document.getElementById('history-brand')?.value || '';
+  const station = document.getElementById('history-station')?.value || '';
+  const start = document.getElementById('history-date-start')?.value || '';
+  const end = document.getElementById('history-date-end')?.value || '';
+  const sort = document.getElementById('history-sort')?.value || 'date';
+  const direction = document.getElementById('history-direction')?.value || 'desc';
+  const data = entries.filter(e => (!brand || e.brand === brand) && (!station || e.station === station) && (!start || e.date >= start) && (!end || e.date <= end));
+  const sorted = [...data].sort((a, b) => {
+    let av = a[sort];
+    let bv = b[sort];
+    if (['ppg', 'gallons', 'total'].includes(sort)) return Number(av) - Number(bv);
+    return String(av || '').localeCompare(String(bv || ''));
+  });
+  return direction === 'desc' ? sorted.reverse() : sorted;
+}
+
 function renderHistory() {
   const tbody = document.getElementById('history-body');
   const empty = document.getElementById('history-empty');
 
-  if (!entries.length) {
+  const historyData = getHistoryEntries();
+  if (!historyData.length) {
     tbody.innerHTML = '';
     empty.style.display = 'block';
+    empty.textContent = entries.length ? 'No entries match these history filters.' : 'No fill-ups yet — add your first one!';
     return;
   }
 
   empty.style.display = 'none';
-  tbody.innerHTML = entries.map(e => String(e.id) === String(editingId) ? editRow(e) : displayRow(e)).join('');
+  tbody.innerHTML = historyData.map(e => String(e.id) === String(editingId) ? editRow(e) : displayRow(e)).join('');
 }
 
 function fullAddress(e) {
@@ -778,11 +895,26 @@ function monthsBetween(start, end) {
   return (ey - sy) * 12 + (em - sm) + 1;
 }
 
+function yearKey(dateString) {
+  return dateString.slice(0, 4);
+}
+
+function yearLabel(key) {
+  return key;
+}
+
 function getTimeBucket(dateString) {
-  const { start, end } = getSelectedMonthRange();
-  const useWeeks = Number.isFinite(monthsBetween(start, end)) && monthsBetween(start, end) <= 2;
-  const key = useWeeks ? weekKey(dateString) : monthKey(dateString);
-  return { key, label: useWeeks ? weekLabel(key) : monthLabel(key) };
+  const view = document.getElementById('filter-time-view')?.value || 'month';
+  if (view === 'week') {
+    const key = weekKey(dateString);
+    return { key, label: weekLabel(key) };
+  }
+  if (view === 'year') {
+    const key = yearKey(dateString);
+    return { key, label: yearLabel(key) };
+  }
+  const key = monthKey(dateString);
+  return { key, label: monthLabel(key) };
 }
 
 function groupByTime(data) {
@@ -817,12 +949,28 @@ function setMapStation(station) {
 function renderStationMap() {
   const iframe = document.getElementById('station-map');
   const list = document.getElementById('station-map-list');
-  if (!iframe || !list) return;
+  const stats = document.getElementById('station-map-stats');
+  const brandSelect = document.getElementById('map-brand');
+  const stationSelect = document.getElementById('map-station');
+  if (!iframe || !list || !brandSelect || !stationSelect) return;
 
-  const data = getFilteredEntries().filter(e => e.station || fullAddress(e));
+  const filtered = getFilteredEntries();
+  const currentBrand = brandSelect.value;
+  const brands = uniqueValues(filtered, 'brand');
+  brandSelect.innerHTML = '<option value="">All brands</option>' + brands.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  if (brands.includes(currentBrand)) brandSelect.value = currentBrand;
+
+  const brandForMap = brandSelect.value;
+  const mapData = filtered.filter(e => !brandForMap || e.brand === brandForMap);
+  const stationNames = uniqueValues(mapData, 'station');
+  stationSelect.innerHTML = '<option value="">Select station...</option>' + stationNames.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  if (stationNames.includes(selectedMapStation)) stationSelect.value = selectedMapStation;
+
+  const data = mapData.filter(e => e.station || fullAddress(e));
   if (!data.length) {
     iframe.removeAttribute('src');
-    list.innerHTML = '<span class="metric-sub">Add a station address to see it on the map.</span>';
+    list.innerHTML = '<span class="metric-sub">Choose a brand or add a station address to see it on the map.</span>';
+    if (stats) stats.innerHTML = '';
     return;
   }
 
@@ -838,13 +986,35 @@ function renderStationMap() {
 
   const selected = uniqueStations.find(e => e.station === selectedMapStation) || uniqueStations[0];
   selectedMapStation = selected.station;
+  stationSelect.value = selectedMapStation;
   iframe.src = `https://www.google.com/maps?q=${encodeURIComponent(stationMapQuery(selected))}&output=embed`;
+
+  const selectedVisits = mapData.filter(e => e.station === selectedMapStation);
+  const selectedBrandVisits = selected.brand ? filtered.filter(e => e.brand === selected.brand) : [];
+  const lastVisit = [...selectedVisits].sort(sortNewest)[0];
+  const totalSpent = selectedVisits.reduce((sum, e) => sum + e.total, 0);
+  if (stats) {
+    stats.innerHTML = `
+      <div class="map-stat"><div class="map-stat-label">Station visits</div><div class="map-stat-value">${selectedVisits.length}</div></div>
+      <div class="map-stat"><div class="map-stat-label">Brand visits</div><div class="map-stat-value">${selectedBrandVisits.length}</div></div>
+      <div class="map-stat"><div class="map-stat-label">Last / spent</div><div class="map-stat-value">${escapeHtml(lastVisit?.date || '-')} · $${totalSpent.toFixed(2)}</div></div>
+    `;
+  }
 
   list.innerHTML = uniqueStations.map(e => `
     <button class="station-chip ${e.station === selectedMapStation ? 'active' : ''}" type="button" onclick="setMapStation('${escapeJs(e.station)}')">
       ${escapeHtml(e.station || e.brand || 'Station')}
     </button>
   `).join('');
+}
+
+function uniqueValues(data, key) {
+  const seen = new Set();
+  return [...data].sort(sortNewest).map(e => String(e[key] || '').trim()).filter(v => {
+    if (!v || seen.has(v)) return false;
+    seen.add(v);
+    return true;
+  });
 }
 
 function renderCharts() {
