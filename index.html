@@ -135,6 +135,38 @@
     .add-actions-grid { gap:14px !important; row-gap:18px !important; margin-top:22px; }
     .add-actions-grid .save-btn, .add-actions-grid .small-btn { height:52px; width:100%; }
   }
+  /* Final fix: keep month range inputs as true 1x2 fields inside cards */
+  .date-range-group { grid-column:1 / -1 !important; max-width:100%; min-width:0; overflow:hidden; }
+  .date-range-group .range-grid {
+    display:flex !important;
+    flex-direction:row !important;
+    gap:12px !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+  .date-range-group .range-grid .form-input {
+    flex:1 1 0 !important;
+    width:0 !important;
+    min-width:0 !important;
+    max-width:none !important;
+    height:52px !important;
+    min-height:52px !important;
+    box-sizing:border-box !important;
+    font-size:14px !important;
+    line-height:52px !important;
+    padding:0 6px !important;
+    text-align:center !important;
+    overflow:hidden !important;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  @media (max-width:640px) {
+    .date-range-group .range-grid { gap:10px !important; }
+    .date-range-group .range-grid .form-input { height:52px !important; font-size:13px !important; padding:0 3px !important; }
+  }
 
 </style>
 
@@ -249,9 +281,9 @@
             <select class="form-select" id="map-station" onchange="setMapStation(this.value)"></select>
           </div>
         </div>
-        <iframe id="station-map" class="station-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         <div class="map-stats" id="station-map-stats"></div>
         <div class="station-map-list" id="station-map-list"></div>
+        <iframe id="station-map" class="station-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         <div class="station-edit-card collapsed" id="station-edit-card">
           <div class="station-edit-header">
             <div class="section-title">Edit station info</div>
