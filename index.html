@@ -41,6 +41,9 @@
   .station-map-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .station-chip { border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.72); border-radius:999px; padding:8px 10px; font:inherit; font-size:13px; cursor:pointer; }
   .station-chip.active { background:#e8c840; color:#171717; border-color:#e8c840; }
+  .station-edit-card { margin-top:14px; padding-top:14px; border-top:1px solid rgba(0,0,0,0.08); }
+  .station-edit-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:end; }
+  .form-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px; }
 
   .calendar-card { margin-top:16px; }
   .calendar-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:12px 0; }
@@ -59,7 +62,7 @@
   .calendar-entry-sub { color:#777; font-size:13px; margin-top:3px; }
 
   @media (max-width:640px) {
-    .range-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; }
+    .range-grid { grid-template-columns:1fr; gap:10px; }
     .form-grid-2,
     .address-grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; row-gap:12px; }
     .form-grid-2 .form-label,
@@ -72,6 +75,9 @@
     .map-stat:last-child { grid-column:1 / -1; }
     .calendar-day { min-height:42px; padding:5px; border-radius:10px; }
     .station-map-frame { height:240px; }
+    .station-edit-grid { grid-template-columns:1fr; }
+    .btn-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .btn-row .save-btn, .btn-row .small-btn { flex:1 1 170px; min-width:0; }
   }
 </style>
 
@@ -187,6 +193,22 @@
         <iframe id="station-map" class="station-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         <div class="map-stats" id="station-map-stats"></div>
         <div class="station-map-list" id="station-map-list"></div>
+        <div class="station-edit-card">
+          <div class="section-title" style="margin-bottom:12px;">Edit station info</div>
+          <div class="station-edit-grid">
+            <div class="form-group"><label class="form-label">Station to edit</label><select class="form-select" id="edit-station-select" onchange="loadStationEditForm()"></select></div>
+            <div class="form-group"><label class="form-label">Brand</label><input class="form-input" id="edit-station-brand" placeholder="Brand" /></div>
+            <div class="form-group"><label class="form-label">Station name</label><input class="form-input" id="edit-station-name" placeholder="Station" /></div>
+            <div class="form-group"><label class="form-label">Address 1</label><input class="form-input" id="edit-station-address1" placeholder="Address 1" /></div>
+            <div class="form-group"><label class="form-label">City</label><input class="form-input" id="edit-station-city" placeholder="City" /></div>
+            <div class="form-group"><label class="form-label">State</label><input class="form-input" id="edit-station-state" placeholder="State" maxlength="2" /></div>
+            <div class="form-group"><label class="form-label">ZIP</label><input class="form-input" id="edit-station-zip" placeholder="ZIP" /></div>
+          </div>
+          <div class="form-actions">
+            <button class="small-btn" type="button" onclick="saveStationInfoEdit()">Update all matching entries</button>
+            <span class="save-msg" id="station-edit-msg"></span>
+          </div>
+        </div>
       </div>
       <div class="chart-card calendar-card">
         <div class="section-title">Fill-up calendar</div>
@@ -531,6 +553,20 @@ async function updateEntryInCloud(entry) {
   if (error) throw error;
 }
 
+async function updateEntriesStationInfoInCloud(ids, stationInfo) {
+  for (const id of ids) {
+    const { error } = await supabaseClient.from('gas_entries').update({
+      brand: stationInfo.brand,
+      station: stationInfo.station,
+      address1: stationInfo.address1,
+      city: stationInfo.city,
+      state: stationInfo.state,
+      zip: stationInfo.zip
+    }).eq('id', id);
+    if (error) throw error;
+  }
+}
+
 async function deleteEntryFromCloud(id) {
   const { error } = await supabaseClient.from('gas_entries').delete().eq('id', id);
   if (error) throw error;
@@ -717,6 +753,7 @@ function renderAll() {
   renderHistory();
   renderCharts();
   renderStationMap();
+  renderStationEditOptions();
   renderCalendar();
 }
 
@@ -742,6 +779,80 @@ function latestStationMap() {
   });
 
   return map;
+}
+
+
+function getStationRecord(stationName) {
+  return latestStationMap().get(stationName) || null;
+}
+
+function renderStationEditOptions() {
+  const select = document.getElementById('edit-station-select');
+  if (!select) return;
+  const current = select.value || selectedMapStation || '';
+  const stations = uniqueByRecent('station');
+  select.innerHTML = '<option value="">Select station...</option>' + stations.map(v => '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + '</option>').join('');
+  if (stations.includes(current)) select.value = current;
+  loadStationEditForm(false);
+}
+
+function loadStationEditForm(showEmpty = true) {
+  const stationName = document.getElementById('edit-station-select')?.value || '';
+  const record = getStationRecord(stationName);
+  const fields = {
+    'edit-station-brand': record?.brand || '',
+    'edit-station-name': record?.station || '',
+    'edit-station-address1': record?.address1 || '',
+    'edit-station-city': record?.city || '',
+    'edit-station-state': record?.state || '',
+    'edit-station-zip': record?.zip || ''
+  };
+  Object.entries(fields).forEach(([id, value]) => { const el = document.getElementById(id); if (el) el.value = value; });
+  if (showEmpty && !record) showStationEditMsg('Select a station to edit.', true);
+}
+
+function showStationEditMsg(message, isError = false) {
+  const el = document.getElementById('station-edit-msg');
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = isError ? 'var(--danger)' : 'var(--success)';
+  setTimeout(() => { el.textContent = ''; }, 3500);
+}
+
+async function saveStationInfoEdit() {
+  const oldStation = document.getElementById('edit-station-select')?.value || '';
+  if (!oldStation) { showStationEditMsg('Select a station first.', true); return; }
+
+  const stationInfo = {
+    brand: document.getElementById('edit-station-brand').value.trim(),
+    station: document.getElementById('edit-station-name').value.trim(),
+    address1: document.getElementById('edit-station-address1').value.trim(),
+    city: document.getElementById('edit-station-city').value.trim(),
+    state: document.getElementById('edit-station-state').value.trim().toUpperCase(),
+    zip: document.getElementById('edit-station-zip').value.trim()
+  };
+
+  if (!stationInfo.brand || !stationInfo.station) {
+    showStationEditMsg('Brand and station name are required.', true);
+    return;
+  }
+
+  const matching = entries.filter(e => e.station === oldStation);
+  if (!matching.length) { showStationEditMsg('No matching entries found.', true); return; }
+  if (!confirm('Update ' + matching.length + ' previous gas entr' + (matching.length === 1 ? 'y' : 'ies') + ' for ' + oldStation + '?')) return;
+
+  try {
+    await updateEntriesStationInfoInCloud(matching.map(e => e.id), stationInfo);
+    await loadEntriesFromCloud();
+    selectedMapStation = stationInfo.station;
+    renderAll();
+    const select = document.getElementById('edit-station-select');
+    if (select) select.value = stationInfo.station;
+    showStationEditMsg('Updated ' + matching.length + ' entr' + (matching.length === 1 ? 'y' : 'ies') + '.');
+  } catch (err) {
+    console.error('Station update failed:', err);
+    showStationEditMsg('Could not update station info.', true);
+  }
 }
 
 function renderSuggestions() {
@@ -1032,6 +1143,8 @@ function renderStationMap() {
   const selected = uniqueStations.find(e => e.station === selectedMapStation) || uniqueStations[0];
   selectedMapStation = selected.station;
   stationSelect.value = selectedMapStation;
+  const editSelect = document.getElementById('edit-station-select');
+  if (editSelect && !editSelect.value) { editSelect.value = selectedMapStation; loadStationEditForm(false); }
   iframe.src = `https://www.google.com/maps?q=${encodeURIComponent(stationMapQuery(selected))}&output=embed`;
 
   const selectedVisits = mapData.filter(e => e.station === selectedMapStation);
