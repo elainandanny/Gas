@@ -11,27 +11,27 @@
 <style>
   .hidden { display: none !important; }
   .filter-card.collapsed .filter-grid { display: none; }
+  .history-filter-card.collapsed .history-controls,
+  .history-filter-card.collapsed .history-filter-actions { display: none; }
   .filter-card .filter-header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .filter-card .filter-toggle { white-space:nowrap; }
   .filter-grid { align-items:end; }
-  .wide-filter { grid-column:1 / -1; min-width:0; }
-  .checkbox-line { display:flex; align-items:center; gap:8px; min-height:44px; font-weight:600; color:#666; }
-  .range-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%; }
+  .range-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; width:100%; }
   .form-grid-2,
   .address-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; row-gap:12px; align-items:start; }
   .form-grid-2 .form-group,
   .address-grid-2 .form-group,
-  .range-grid .form-input { min-width:0; overflow:hidden; }
+  .range-grid .form-input { min-width:0 !important; overflow:hidden; }
   .form-grid-2 .form-input,
   .address-grid-2 .form-input,
-  .range-grid .form-input { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+  .range-grid .form-input { width:100% !important; max-width:100%; min-width:0 !important; box-sizing:border-box; }
   .form-grid-2 input[type="date"] { -webkit-appearance:none; appearance:none; display:block; font-size:14px; padding-left:6px; padding-right:6px; text-align:center; min-width:0; overflow:hidden; }
   .quick-select { margin-top:8px; }
   .chart-controls, .map-controls, .history-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
   .history-controls { margin:0 0 14px; }
   .chart-title-row, .map-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
   .inline-control { max-width:180px; }
-  .map-stats { margin-top:10px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .map-stats { margin-top:10px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
   .map-stat { border:1px solid rgba(0,0,0,0.08); border-radius:12px; padding:10px; background:rgba(255,255,255,0.7); }
   .map-stat-label { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#777; }
   .map-stat-value { font-weight:700; font-size:15px; margin-top:3px; }
@@ -41,20 +41,37 @@
   .station-map-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .station-chip { border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.72); border-radius:999px; padding:8px 10px; font:inherit; font-size:13px; cursor:pointer; }
   .station-chip.active { background:#e8c840; color:#171717; border-color:#e8c840; }
+
+  .calendar-card { margin-top:16px; }
+  .calendar-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:12px 0; }
+  .calendar-month-title { font-weight:800; font-size:16px; }
+  .calendar-nav { display:flex; gap:8px; }
+  .calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+  .calendar-weekday { text-align:center; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#777; padding:4px 0; }
+  .calendar-day { border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.72); border-radius:12px; min-height:48px; padding:6px; font:inherit; text-align:left; position:relative; }
+  .calendar-day.muted { opacity:.35; }
+  .calendar-day.has-fill { background:rgba(232,200,64,0.32); border-color:rgba(232,200,64,0.75); font-weight:800; }
+  .calendar-day.selected { outline:2px solid #e8c840; }
+  .calendar-dot { position:absolute; right:6px; bottom:6px; width:7px; height:7px; border-radius:50%; background:#e8c840; }
+  .calendar-details { margin-top:12px; display:grid; gap:8px; }
+  .calendar-entry { border:1px solid rgba(0,0,0,0.08); border-radius:14px; padding:10px; background:rgba(255,255,255,0.72); }
+  .calendar-entry-title { font-weight:800; }
+  .calendar-entry-sub { color:#777; font-size:13px; margin-top:3px; }
+
   @media (max-width:640px) {
-    .range-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .range-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; }
     .form-grid-2,
     .address-grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; row-gap:12px; }
     .form-grid-2 .form-label,
     .address-grid-2 .form-label { font-size:13px; line-height:1.2; }
     .form-grid-2 .form-input,
     .address-grid-2 .form-input { font-size:16px; padding-left:10px; padding-right:8px; min-width:0; }
-    .range-grid .form-input { font-size:13px; padding-left:4px; padding-right:4px; min-width:0; }
     .form-grid-2 input[type="date"] { font-size:13px; padding-left:4px; padding-right:4px; text-align:center; }
     .chart-controls, .map-controls, .history-controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .map-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .map-stat.wide { grid-column:1 / -1; }
-    .station-map-frame { height:240px; margin-top:10px; }
+    .map-stat:last-child { grid-column:1 / -1; }
+    .calendar-day { min-height:42px; padding:5px; border-radius:10px; }
+    .station-map-frame { height:240px; }
   }
 </style>
 
@@ -119,7 +136,7 @@
             <label class="form-label">Station</label>
             <select class="form-select" id="filter-station" onchange="renderAll()"></select>
           </div>
-          <div class="form-group wide-filter">
+          <div class="form-group">
             <label class="form-label">Month range</label>
             <div class="range-grid">
               <input class="form-input" type="month" id="filter-month-start" onchange="renderAll()" aria-label="Start month" />
@@ -149,10 +166,6 @@
           <div class="chart-wrap-sm"><canvas id="chart-ppg"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="section-title">MPG over time</div>
-          <div class="chart-wrap-sm"><canvas id="chart-mpg"></canvas></div>
-        </div>
-        <div class="chart-card">
           <div class="section-title">Gallons by brand</div>
           <div class="chart-wrap-sm"><canvas id="chart-brands"></canvas></div>
         </div>
@@ -171,9 +184,19 @@
             <select class="form-select" id="map-station" onchange="setMapStation(this.value)"></select>
           </div>
         </div>
+        <iframe id="station-map" class="station-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         <div class="map-stats" id="station-map-stats"></div>
         <div class="station-map-list" id="station-map-list"></div>
-        <iframe id="station-map" class="station-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <div class="chart-card calendar-card">
+        <div class="section-title">Fill-up calendar</div>
+        <div class="calendar-head">
+          <button class="small-btn" type="button" onclick="changeCalendarMonth(-1)">Prev</button>
+          <div class="calendar-month-title" id="calendar-month-title"></div>
+          <button class="small-btn" type="button" onclick="changeCalendarMonth(1)">Next</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div class="calendar-details" id="calendar-details"></div>
       </div>
     </div>
 
@@ -217,14 +240,6 @@
             <label class="form-label">Total ($)</label>
             <input class="form-input" type="number" step="0.01" id="f-total" placeholder="43.74" />
           </div>
-          <div class="form-group">
-            <label class="form-label">Odometer</label>
-            <input class="form-input" type="number" step="1" id="f-odometer" placeholder="Optional" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Tank status</label>
-            <label class="checkbox-line"><input type="checkbox" id="f-full-tank" checked /> Full tank</label>
-          </div>
         </div>
 
         <div class="section-title" style="margin-top:16px;">Address</div>
@@ -256,16 +271,20 @@
     </div>
 
     <div id="tab-history" class="panel">
-      <div class="filter-card history-filter-card">
-        <div class="section-title" style="margin-bottom:12px;">History filters</div>
+      <div class="filter-card history-filter-card collapsed" id="history-filter-card">
+        <div class="filter-header" style="margin-bottom:12px;">
+          <div class="section-title">History filters</div>
+          <button class="small-btn filter-toggle" id="history-filter-toggle-btn" type="button" onclick="toggleHistoryFilters()">Expand filters</button>
+        </div>
         <div class="history-controls">
           <div class="form-group"><label class="form-label">Brand</label><select class="form-select" id="history-brand" onchange="renderHistory()"></select></div>
           <div class="form-group"><label class="form-label">Station</label><select class="form-select" id="history-station" onchange="renderHistory()"></select></div>
-          <div class="form-group wide-filter"><label class="form-label">Month range</label><div class="range-grid"><input class="form-input" type="month" id="history-date-start" onchange="renderHistory()" aria-label="History start month" /><input class="form-input" type="month" id="history-date-end" onchange="renderHistory()" aria-label="History end month" /></div></div>
-          <div class="form-group"><label class="form-label">Sort by</label><select class="form-select" id="history-sort" onchange="renderHistory()"><option value="date">Date</option><option value="brand">Brand</option><option value="station">Station</option><option value="ppg">$/gal</option><option value="gallons">Gallons</option><option value="total">Total</option><option value="odometer">Odometer</option><option value="mpg">MPG</option></select></div>
+          <div class="form-group"><label class="form-label">From</label><input class="form-input" type="date" id="history-date-start" onchange="renderHistory()" /></div>
+          <div class="form-group"><label class="form-label">To</label><input class="form-input" type="date" id="history-date-end" onchange="renderHistory()" /></div>
+          <div class="form-group"><label class="form-label">Sort by</label><select class="form-select" id="history-sort" onchange="renderHistory()"><option value="date">Date</option><option value="brand">Brand</option><option value="station">Station</option><option value="ppg">$/gal</option><option value="gallons">Gallons</option><option value="total">Total</option></select></div>
           <div class="form-group"><label class="form-label">Direction</label><select class="form-select" id="history-direction" onchange="renderHistory()"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
         </div>
-        <button class="small-btn" type="button" onclick="clearHistoryFilters()">Reset history filters</button>
+        <div class="history-filter-actions"><button class="small-btn" type="button" onclick="clearHistoryFilters()">Reset history filters</button></div>
       </div>
       <div class="table-wrap">
         <table>
@@ -277,8 +296,6 @@
               <th>$/gal</th>
               <th>Gallons</th>
               <th>Total</th>
-              <th>Odometer</th>
-              <th>MPG</th>
               <th>Address</th>
               <th></th>
             </tr>
@@ -312,8 +329,9 @@ let entries = loadLocalEntries();
 let chartSpending;
 let chartPPG;
 let chartBrands;
-let chartMPG;
 let selectedMapStation = "";
+let calendarMonth = new Date();
+let selectedCalendarDate = "";
 let editingId = null;
 
 function loadLocalEntries() {
@@ -342,11 +360,8 @@ function normalizeEntry(e) {
   const ppg = Number(e?.ppg);
   const gallons = Number(e?.gallons);
   const total = Number(e?.total);
-  const odometerRaw = e?.odometer ?? e?.mileage ?? '';
-  const odometer = odometerRaw === '' || odometerRaw === null || typeof odometerRaw === 'undefined' ? null : Number(odometerRaw);
-  const fullTank = typeof e?.full_tank === 'boolean' ? e.full_tank : (typeof e?.fullTank === 'boolean' ? e.fullTank : true);
 
-  if (!brand || !station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total) || (odometer !== null && Number.isNaN(odometer))) {
+  if (!brand || !station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) {
     return null;
   }
 
@@ -360,8 +375,6 @@ function normalizeEntry(e) {
     ppg,
     gallons,
     total,
-    odometer,
-    full_tank: fullTank,
     address1: String(e?.address1 || '').trim(),
     city: String(e?.city || '').trim(),
     state: String(e?.state || '').trim(),
@@ -492,8 +505,6 @@ async function saveEntryToCloud(entry) {
     ppg: entry.ppg,
     gallons: entry.gallons,
     total: entry.total,
-    odometer: entry.odometer,
-    full_tank: entry.full_tank,
     address1: entry.address1,
     city: entry.city,
     state: entry.state,
@@ -511,8 +522,6 @@ async function updateEntryInCloud(entry) {
     ppg: entry.ppg,
     gallons: entry.gallons,
     total: entry.total,
-    odometer: entry.odometer,
-    full_tank: entry.full_tank,
     address1: entry.address1,
     city: entry.city,
     state: entry.state,
@@ -533,7 +542,7 @@ function switchTab(name) {
   document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
 
-  if (name === 'dashboard') renderCharts();
+  if (name === 'dashboard') { renderCharts(); renderStationMap(); renderCalendar(); }
 }
 
 function calcTotal(prefix = 'f') {
@@ -550,12 +559,6 @@ async function addEntry() {
 
   if (!entry) {
     showMsg('Please fill in brand, station, date, price, gallons, and total.', true);
-    return;
-  }
-
-  const odometerError = validateOdometer(entry);
-  if (odometerError) {
-    showMsg(odometerError, true);
     return;
   }
 
@@ -583,27 +586,20 @@ function readFormEntry(prefix, existingId = null) {
   const city = document.getElementById(`${prefix}-city`).value.trim();
   const state = document.getElementById(`${prefix}-state`).value.trim().toUpperCase();
   const zip = document.getElementById(`${prefix}-zip`).value.trim();
-  const odometerEl = document.getElementById(`${prefix}-odometer`);
-  const fullTankEl = document.getElementById(`${prefix}-full-tank`);
-  const odometerValue = odometerEl ? odometerEl.value.trim() : '';
-  const odometer = odometerValue ? parseFloat(odometerValue) : null;
-  const full_tank = fullTankEl ? fullTankEl.checked : true;
 
-  if (!brand || !station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total) || (odometer !== null && Number.isNaN(odometer))) {
+  if (!brand || !station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) {
     return null;
   }
 
-  return { id: existingId, brand, station, date, ppg, gallons, total, odometer, full_tank, address1, city, state, zip };
+  return { id: existingId, brand, station, date, ppg, gallons, total, address1, city, state, zip };
 }
 
 function clearAddForm() {
-  ['f-brand', 'f-station', 'f-ppg', 'f-gallons', 'f-total', 'f-odometer', 'f-address1', 'f-city', 'f-state', 'f-zip']
+  ['f-brand', 'f-station', 'f-ppg', 'f-gallons', 'f-total', 'f-address1', 'f-city', 'f-state', 'f-zip']
     .forEach(id => document.getElementById(id).value = '');
   ['f-brand-picker', 'f-station-picker'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-  const fullTank = document.getElementById('f-full-tank');
-  if (fullTank) fullTank.checked = true;
 }
 
 function resetAddDetails() {
@@ -658,12 +654,6 @@ async function saveEdit(id) {
     return;
   }
 
-  const odometerError = validateOdometer(edited, id);
-  if (odometerError) {
-    alert(odometerError);
-    return;
-  }
-
   try {
     await updateEntryInCloud(edited);
     editingId = null;
@@ -711,6 +701,14 @@ function toggleDashboardFilters() {
   btn.textContent = collapsed ? 'Expand filters' : 'Hide filters';
 }
 
+function toggleHistoryFilters() {
+  const card = document.getElementById('history-filter-card');
+  const btn = document.getElementById('history-filter-toggle-btn');
+  if (!card || !btn) return;
+  const collapsed = card.classList.toggle('collapsed');
+  btn.textContent = collapsed ? 'Expand filters' : 'Hide filters';
+}
+
 function renderAll() {
   renderSuggestions();
   renderFilters();
@@ -719,6 +717,7 @@ function renderAll() {
   renderHistory();
   renderCharts();
   renderStationMap();
+  renderCalendar();
 }
 
 function uniqueByRecent(key) {
@@ -804,15 +803,12 @@ function renderMetrics() {
   const avgPPG = data.reduce((sum, e) => sum + e.ppg, 0) / data.length;
   const totalGal = data.reduce((sum, e) => sum + e.gallons, 0);
   const last = [...data].sort(sortNewest)[0];
-  const mpgValues = calculateMpgSeries(data).map(item => item.mpg).filter(v => Number.isFinite(v));
-  const avgMpg = mpgValues.length ? mpgValues.reduce((sum, v) => sum + v, 0) / mpgValues.length : null;
 
   el.innerHTML = `
     <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${data.length} fill-up${data.length !== 1 ? 's' : ''}</div></div>
     <div class="metric"><div class="metric-label">Avg price / gal</div><div class="metric-value">$${avgPPG.toFixed(3)}</div></div>
     <div class="metric"><div class="metric-label">Total gallons</div><div class="metric-value">${totalGal.toFixed(1)}</div></div>
     <div class="metric"><div class="metric-label">Last matching fill-up</div><div class="metric-value" style="font-size:15px;">${escapeHtml(last.station)}</div><div class="metric-sub">${escapeHtml(last.date)}</div></div>
-    <div class="metric"><div class="metric-label">Avg MPG</div><div class="metric-value">${avgMpg === null ? '-' : avgMpg.toFixed(1)}</div><div class="metric-sub">Full-tank entries only</div></div>
   `;
 }
 
@@ -842,15 +838,11 @@ function getHistoryEntries() {
   const end = document.getElementById('history-date-end')?.value || '';
   const sort = document.getElementById('history-sort')?.value || 'date';
   const direction = document.getElementById('history-direction')?.value || 'desc';
-  const data = entries.filter(e => {
-    const m = e.date.slice(0, 7);
-    return (!brand || e.brand === brand) && (!station || e.station === station) && (!start || m >= start) && (!end || m <= end);
-  });
+  const data = entries.filter(e => (!brand || e.brand === brand) && (!station || e.station === station) && (!start || e.date >= start) && (!end || e.date <= end));
   const sorted = [...data].sort((a, b) => {
     let av = a[sort];
     let bv = b[sort];
-    if (sort === 'mpg') { av = calculateMpgForEntry(a, entries); bv = calculateMpgForEntry(b, entries); }
-    if (['ppg', 'gallons', 'total', 'odometer', 'mpg'].includes(sort)) return (Number.isFinite(Number(av)) ? Number(av) : -Infinity) - (Number.isFinite(Number(bv)) ? Number(bv) : -Infinity);
+    if (['ppg', 'gallons', 'total'].includes(sort)) return Number(av) - Number(bv);
     return String(av || '').localeCompare(String(bv || ''));
   });
   return direction === 'desc' ? sorted.reverse() : sorted;
@@ -885,8 +877,6 @@ function displayRow(e) {
       <td>$${e.ppg.toFixed(3)}</td>
       <td>${e.gallons.toFixed(3)}</td>
       <td>$${e.total.toFixed(2)}</td>
-      <td>${e.odometer === null || typeof e.odometer === 'undefined' ? '-' : Number(e.odometer).toLocaleString()}</td>
-      <td>${formatMpg(calculateMpgForEntry(e, entries))}</td>
       <td>${escapeHtml(fullAddress(e))}</td>
       <td><div class="table-actions"><button class="icon-btn" onclick="startEdit('${e.id}')">Edit</button><button class="icon-btn danger" onclick="deleteEntry('${e.id}')">Delete</button></div></td>
     </tr>
@@ -902,8 +892,6 @@ function editRow(e) {
       <td><input class="table-input" id="e-ppg" type="number" step="0.001" value="${e.ppg}" oninput="calcTotal('e')"></td>
       <td><input class="table-input" id="e-gallons" type="number" step="0.001" value="${e.gallons}" oninput="calcTotal('e')"></td>
       <td><input class="table-input" id="e-total" type="number" step="0.01" value="${e.total}"></td>
-      <td><input class="table-input" id="e-odometer" type="number" step="1" value="${e.odometer ?? ''}"><label style="display:block;margin-top:4px;font-size:11px;"><input id="e-full-tank" type="checkbox" ${e.full_tank ? 'checked' : ''}> Full</label></td>
-      <td>${formatMpg(calculateMpgForEntry(e, entries))}</td>
       <td>
         <input class="table-input" id="e-address1" value="${escapeHtml(e.address1)}" placeholder="Address 1" style="margin-bottom:4px;">
         <input class="table-input" id="e-city" value="${escapeHtml(e.city)}" placeholder="City" style="margin-bottom:4px;">
@@ -928,9 +916,9 @@ function monthKey(dateString) {
 function weekKey(dateString) {
   const date = parseLocalDate(dateString);
   const day = date.getDay();
-  const sunday = new Date(date);
-  sunday.setDate(date.getDate() - day);
-  return sunday.toISOString().slice(0, 10);
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - ((day + 6) % 7));
+  return monday.toISOString().slice(0, 10);
 }
 
 function monthLabel(key) {
@@ -993,78 +981,6 @@ function groupByTime(data) {
 }
 
 
-
-function compareEntriesChronological(a, b) {
-  return String(a.date).localeCompare(String(b.date)) || String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id || '').localeCompare(String(b.id || ''));
-}
-
-function entriesWithOdometer(data = entries, excludeId = null) {
-  return [...data]
-    .filter(e => String(e.id) !== String(excludeId) && e.odometer !== null && typeof e.odometer !== 'undefined' && !Number.isNaN(Number(e.odometer)))
-    .sort(compareEntriesChronological);
-}
-
-function validateOdometer(entry, existingId = null) {
-  if (entry.odometer === null || typeof entry.odometer === 'undefined') return '';
-  const odometer = Number(entry.odometer);
-  if (!Number.isFinite(odometer)) return 'Enter a valid odometer reading, or leave it blank.';
-  const prior = entriesWithOdometer(entries, existingId).filter(e => e.date <= entry.date).pop();
-  if (prior && odometer <= Number(prior.odometer)) {
-    return `Odometer must be greater than the previous reading (${Number(prior.odometer).toLocaleString()}).`;
-  }
-  return '';
-}
-
-function calculateMpgSeries(data = entries) {
-  const sorted = [...data]
-    .filter(e => e.odometer !== null && typeof e.odometer !== 'undefined' && !Number.isNaN(Number(e.odometer)))
-    .sort(compareEntriesChronological);
-  const results = [];
-  let lastFull = null;
-  let gallonsSinceLastFull = 0;
-  sorted.forEach(e => {
-    gallonsSinceLastFull += Number(e.gallons) || 0;
-    if (e.full_tank && lastFull) {
-      const miles = Number(e.odometer) - Number(lastFull.odometer);
-      if (miles > 0 && gallonsSinceLastFull > 0) {
-        results.push({ id: e.id, date: e.date, mpg: miles / gallonsSinceLastFull, miles, gallons: gallonsSinceLastFull });
-      }
-      lastFull = e;
-      gallonsSinceLastFull = 0;
-    } else if (e.full_tank && !lastFull) {
-      lastFull = e;
-      gallonsSinceLastFull = 0;
-    }
-  });
-  return results;
-}
-
-function calculateMpgForEntry(entry, data = entries) {
-  const match = calculateMpgSeries(data).find(item => String(item.id) === String(entry.id));
-  return match ? match.mpg : null;
-}
-
-function formatMpg(value) {
-  return Number.isFinite(value) ? `${value.toFixed(1)}` : '-';
-}
-
-function groupMpgByTime(data) {
-  const series = calculateMpgSeries(data);
-  const buckets = new Map();
-  series.forEach(item => {
-    const bucket = getTimeBucket(item.date);
-    if (!buckets.has(bucket.key)) buckets.set(bucket.key, { key: bucket.key, label: bucket.label, weighted: 0, gallons: 0 });
-    const b = buckets.get(bucket.key);
-    b.weighted += item.mpg * item.gallons;
-    b.gallons += item.gallons;
-  });
-  return [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key)).map(item => ({
-    key: item.key,
-    label: item.label,
-    mpg: item.gallons ? Number((item.weighted / item.gallons).toFixed(1)) : null
-  }));
-}
-
 function stationMapQuery(e) {
   const address = fullAddress(e);
   return [e.station, e.brand, address].filter(Boolean).join(', ');
@@ -1124,9 +1040,9 @@ function renderStationMap() {
   const totalSpent = selectedVisits.reduce((sum, e) => sum + e.total, 0);
   if (stats) {
     stats.innerHTML = `
-      <div class="map-stat"><div class="map-stat-label">Station visits</div><div class="map-stat-value">${selectedVisits.length}</div></div>
       <div class="map-stat"><div class="map-stat-label">Brand visits</div><div class="map-stat-value">${selectedBrandVisits.length}</div></div>
-      <div class="map-stat wide"><div class="map-stat-label">Last / spent</div><div class="map-stat-value">${escapeHtml(lastVisit?.date || '-')} · $${totalSpent.toFixed(2)}</div></div>
+      <div class="map-stat"><div class="map-stat-label">Station visits</div><div class="map-stat-value">${selectedVisits.length}</div></div>
+      <div class="map-stat"><div class="map-stat-label">Last / spent</div><div class="map-stat-value">${escapeHtml(lastVisit?.date || '-')} · ${totalSpent.toFixed(2)}</div></div>
     `;
   }
 
@@ -1146,11 +1062,94 @@ function uniqueValues(data, key) {
   });
 }
 
+
+function toDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function changeCalendarMonth(delta) {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1);
+  selectedCalendarDate = '';
+  renderCalendar();
+}
+
+function selectCalendarDate(dateKey) {
+  selectedCalendarDate = dateKey;
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const title = document.getElementById('calendar-month-title');
+  const grid = document.getElementById('calendar-grid');
+  const details = document.getElementById('calendar-details');
+  if (!title || !grid || !details) return;
+
+  const data = getFilteredEntries();
+  if (!data.length) {
+    title.textContent = 'No fill-ups';
+    grid.innerHTML = '';
+    details.innerHTML = '<div class="metric-sub">Add a fill-up or adjust filters to see calendar entries.</div>';
+    return;
+  }
+
+  if (!calendarMonth || Number.isNaN(calendarMonth.getTime())) {
+    const latest = [...data].sort(sortNewest)[0];
+    calendarMonth = latest?.date ? new Date(latest.date + 'T00:00:00') : new Date();
+  }
+
+  const y = calendarMonth.getFullYear();
+  const m = calendarMonth.getMonth();
+  title.textContent = calendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  const byDate = new Map();
+  data.forEach(e => {
+    if (!byDate.has(e.date)) byDate.set(e.date, []);
+    byDate.get(e.date).push(e);
+  });
+
+  const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const first = new Date(y, m, 1);
+  const start = new Date(y, m, 1 - first.getDay());
+  const cells = [];
+  weekdays.forEach(w => cells.push(`<div class="calendar-weekday">${w}</div>`));
+
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const key = toDateKey(d);
+    const hasFill = byDate.has(key);
+    const muted = d.getMonth() !== m;
+    const selected = selectedCalendarDate === key;
+    cells.push(`
+      <button class="calendar-day ${muted ? 'muted' : ''} ${hasFill ? 'has-fill' : ''} ${selected ? 'selected' : ''}" type="button" onclick="selectCalendarDate('${key}')">
+        ${d.getDate()}${hasFill ? '<span class="calendar-dot"></span>' : ''}
+      </button>
+    `);
+  }
+  grid.innerHTML = cells.join('');
+
+  const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+  const defaultDate = selectedCalendarDate || [...byDate.keys()].filter(k => k.startsWith(monthPrefix)).sort().pop() || '';
+  const selectedEntries = byDate.get(defaultDate) || [];
+  if (!selectedEntries.length) {
+    details.innerHTML = '<div class="metric-sub">Tap a shaded day to see fill-up details.</div>';
+    return;
+  }
+  details.innerHTML = selectedEntries.sort(sortNewest).map(e => `
+    <div class="calendar-entry">
+      <div class="calendar-entry-title">${escapeHtml(e.brand)} · ${escapeHtml(e.station)}</div>
+      <div class="calendar-entry-sub">${escapeHtml(e.date)} · ${e.total.toFixed(2)} · ${e.gallons.toFixed(3)} gal · ${e.ppg.toFixed(3)}/gal</div>
+      ${fullAddress(e) ? `<div class="calendar-entry-sub">${escapeHtml(fullAddress(e))}</div>` : ''}
+    </div>
+  `).join('');
+}
+
 function renderCharts() {
   if (chartSpending) chartSpending.destroy();
   if (chartPPG) chartPPG.destroy();
   if (chartBrands) chartBrands.destroy();
-  if (chartMPG) chartMPG.destroy();
 
   const data = getFilteredEntries();
   if (!data.length) return;
@@ -1159,9 +1158,6 @@ function renderCharts() {
   const labels = grouped.map(item => item.label);
   const totals = grouped.map(item => item.total);
   const ppgs = grouped.map(item => item.avgPpg);
-  const mpgGrouped = groupMpgByTime(data);
-  const mpgLabels = mpgGrouped.map(item => item.label);
-  const mpgs = mpgGrouped.map(item => item.mpg);
 
   const brandMap = {};
   data.forEach(e => {
@@ -1195,12 +1191,6 @@ function renderCharts() {
     type: 'line',
     data: { labels, datasets: [{ data: ppgs, borderColor: '#e8c840', backgroundColor: 'rgba(232,200,64,0.1)', tension: 0.3, pointRadius: 4, fill: true }] },
     options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => '$' + Number(v).toFixed(2) } } } }
-  });
-
-  chartMPG = new Chart(document.getElementById('chart-mpg'), {
-    type: 'line',
-    data: { labels: mpgLabels, datasets: [{ data: mpgs, borderColor: '#1a6eb5', backgroundColor: 'rgba(26,110,181,0.1)', tension: 0.3, pointRadius: 4, fill: true }] },
-    options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => Number(v).toFixed(1) } } } }
   });
 
   const palette = ['#e8c840', '#1a6eb5', '#e05a2b', '#2eab6f', '#9b5de5', '#f4845f'];
