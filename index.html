@@ -102,6 +102,40 @@
     .add-actions-grid .save-btn, .add-actions-grid .small-btn { flex:none; font-size:14px; padding-left:6px; padding-right:6px; }
   }
 
+
+  /* Requested layout updates */
+  .filter-card, .history-filter-card { overflow:hidden; }
+  .date-range-group { grid-column:1 / -1; width:100%; min-width:0; }
+  .date-range-group .range-grid {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+    box-sizing:border-box;
+  }
+  .date-range-group .range-grid .form-input {
+    height:52px !important;
+    min-height:52px;
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    box-sizing:border-box;
+    overflow:hidden;
+    font-size:15px;
+    padding-left:8px;
+    padding-right:8px;
+    text-align:center;
+  }
+  .station-map-frame { margin-top:14px; }
+  @media (max-width:640px) {
+    .date-range-group .range-grid { gap:10px !important; }
+    .date-range-group .range-grid .form-input { font-size:12px !important; padding-left:2px; padding-right:2px; }
+    .add-actions-grid { gap:14px !important; row-gap:18px !important; margin-top:22px; }
+    .add-actions-grid .save-btn, .add-actions-grid .small-btn { height:52px; width:100%; }
+  }
+
 </style>
 
 </head>
@@ -149,8 +183,6 @@
     </div>
 
     <div id="tab-dashboard" class="panel active">
-      <div class="banner info-banner" id="sync-banner">Entries save to Supabase and are private to your login.</div>
-
       <div class="filter-card collapsed" id="dashboard-filter-card">
         <div class="filter-header">
           <div class="section-title">Dashboard filters</div>
@@ -480,7 +512,6 @@ function showCorrectView() {
   setSyncStatus(loggedIn ? 'Cloud sync on' : 'Logged out');
 
   if (loggedIn) {
-    document.getElementById('sync-banner').textContent = 'Cloud sync is on. Entries are private to your login.';
   }
 }
 
@@ -559,8 +590,11 @@ async function loadEntriesFromCloud() {
     renderAll();
   } catch (err) {
     console.error('Supabase load failed:', err);
-    document.getElementById('sync-banner').className = 'banner warning-banner';
-    document.getElementById('sync-banner').textContent = 'Could not load from Supabase. Check the SQL schema and policies.';
+    const syncBanner = document.getElementById('sync-banner');
+    if (syncBanner) {
+      syncBanner.className = 'banner warning-banner';
+      syncBanner.textContent = 'Could not load from Supabase. Check the SQL schema and policies.';
+    }
     renderAll();
   }
 }
@@ -980,14 +1014,12 @@ function renderMetrics() {
   const totalGal = data.reduce((sum, e) => sum + e.gallons, 0);
   const mpgValues = calculateMpgSeries(data).map(item => item.mpg).filter(v => Number.isFinite(v));
   const avgMpg = mpgValues.length ? mpgValues.reduce((sum, v) => sum + v, 0) / mpgValues.length : null;
-  const last = [...data].sort(sortNewest)[0];
 
   el.innerHTML = `
     <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${data.length} fill-up${data.length !== 1 ? 's' : ''}</div></div>
     <div class="metric"><div class="metric-label">Avg price / gal</div><div class="metric-value">$${avgPPG.toFixed(3)}</div></div>
     <div class="metric"><div class="metric-label">Total gallons</div><div class="metric-value">${totalGal.toFixed(1)}</div></div>
     <div class="metric"><div class="metric-label">Avg MPG</div><div class="metric-value">${avgMpg ? avgMpg.toFixed(1) : '-'}</div></div>
-    <div class="metric"><div class="metric-label">Last matching fill-up</div><div class="metric-value" style="font-size:15px;">${escapeHtml(last.station)}</div><div class="metric-sub">${escapeHtml(last.date)}</div></div>
   `;
 }
 
@@ -1048,10 +1080,17 @@ function fullAddress(e) {
   return [e.address1, e.city, e.state, e.zip].filter(Boolean).join(', ');
 }
 
+function formatDateShort(value) {
+  const text = String(value || '');
+  const m = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return text;
+  return `${m[2]}.${m[3]}.${m[1].slice(2)}`;
+}
+
 function displayRow(e) {
   return `
     <tr>
-      <td>${escapeHtml(e.date)}</td>
+      <td>${escapeHtml(formatDateShort(e.date))}</td>
       <td>${escapeHtml(e.brand)}</td>
       <td>${escapeHtml(e.station)}</td>
       <td>$${e.ppg.toFixed(3)}</td>
@@ -1228,7 +1267,7 @@ function renderStationMap() {
     stats.innerHTML = `
       <div class="map-stat"><div class="map-stat-label">Brand visits</div><div class="map-stat-value">${selectedBrandVisits.length}</div></div>
       <div class="map-stat"><div class="map-stat-label">Station visits</div><div class="map-stat-value">${selectedVisits.length}</div></div>
-      <div class="map-stat"><div class="map-stat-label">Last / spent</div><div class="map-stat-value">${escapeHtml(lastVisit?.date || '-')} · ${totalSpent.toFixed(2)}</div></div>
+      <div class="map-stat"><div class="map-stat-label">Last / spent</div><div class="map-stat-value">${escapeHtml(formatDateShort(lastVisit?.date || '-'))} · $${totalSpent.toFixed(2)}</div></div>
     `;
   }
 
@@ -1326,7 +1365,7 @@ function renderCalendar() {
   details.innerHTML = selectedEntries.sort(sortNewest).map(e => `
     <div class="calendar-entry">
       <div class="calendar-entry-title">${escapeHtml(e.brand)} · ${escapeHtml(e.station)}</div>
-      <div class="calendar-entry-sub">${escapeHtml(e.date)} · ${e.total.toFixed(2)} · ${e.gallons.toFixed(3)} gal · ${e.ppg.toFixed(3)}/gal</div>
+      <div class="calendar-entry-sub">${escapeHtml(formatDateShort(e.date))} · $${e.total.toFixed(2)} · ${e.gallons.toFixed(3)} gal · ${e.ppg.toFixed(3)}/gal</div>
       ${e.odometer ? `<div class="calendar-entry-sub">Odometer: ${Number(e.odometer).toLocaleString()} · MPG: ${formatMpg(calculateMpgForEntry(e))}</div>` : ''}
       ${fullAddress(e) ? `<div class="calendar-entry-sub">${escapeHtml(fullAddress(e))}</div>` : ''}
     </div>
