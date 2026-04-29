@@ -62,7 +62,7 @@
   .calendar-entry-sub { color:#777; font-size:13px; margin-top:3px; }
 
   @media (max-width:640px) {
-    .range-grid { grid-template-columns:1fr; gap:10px; }
+    .range-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
     .form-grid-2,
     .address-grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; row-gap:12px; }
     .form-grid-2 .form-label,
@@ -79,6 +79,29 @@
     .btn-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
     .btn-row .save-btn, .btn-row .small-btn { flex:1 1 170px; min-width:0; }
   }
+
+  /* Final mobile/layout fixes */
+  .date-range-group { grid-column: 1 / -1; }
+  .range-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; width:100%; max-width:100%; overflow:hidden; }
+  .range-grid .form-input { height:52px; min-width:0; width:100%; max-width:100%; box-sizing:border-box; font-size:16px; padding:0 8px; text-align:center; }
+  .add-actions-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:18px; align-items:center; }
+  .add-actions-grid .save-btn, .add-actions-grid .small-btn { width:100%; height:52px; min-width:0; box-sizing:border-box; margin:0; }
+  .form-card .form-grid-2, .form-card .address-grid-2 { row-gap:18px; }
+  .station-edit-card.collapsed .station-edit-body { display:none; }
+  .station-edit-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .station-edit-card.collapsed .station-edit-header { margin-bottom:0; }
+  .full-tank-row { display:flex; align-items:center; gap:8px; min-height:52px; padding:0 4px; }
+  .full-tank-row input { width:18px; height:18px; }
+  .chart-grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  @media (max-width:900px) { .chart-grid.three { grid-template-columns:1fr; } }
+  @media (max-width:640px) {
+    .range-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:18px !important; }
+    .date-range-group { grid-column:1 / -1; }
+    .range-grid .form-input { font-size:14px; height:52px; padding-left:4px; padding-right:4px; }
+    .add-actions-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+    .add-actions-grid .save-btn, .add-actions-grid .small-btn { flex:none; font-size:14px; padding-left:6px; padding-right:6px; }
+  }
+
 </style>
 
 </head>
@@ -142,7 +165,7 @@
             <label class="form-label">Station</label>
             <select class="form-select" id="filter-station" onchange="renderAll()"></select>
           </div>
-          <div class="form-group">
+          <div class="form-group date-range-group">
             <label class="form-label">Month range</label>
             <div class="range-grid">
               <input class="form-input" type="month" id="filter-month-start" onchange="renderAll()" aria-label="Start month" />
@@ -166,7 +189,7 @@
         <div class="section-title">Total spend over time</div>
         <div class="chart-wrap"><canvas id="chart-spending"></canvas></div>
       </div>
-      <div class="chart-grid">
+      <div class="chart-grid three">
         <div class="chart-card">
           <div class="section-title">Price per gallon over time</div>
           <div class="chart-wrap-sm"><canvas id="chart-ppg"></canvas></div>
@@ -174,6 +197,10 @@
         <div class="chart-card">
           <div class="section-title">Gallons by brand</div>
           <div class="chart-wrap-sm"><canvas id="chart-brands"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="section-title">MPG over time</div>
+          <div class="chart-wrap-sm"><canvas id="chart-mpg"></canvas></div>
         </div>
       </div>
       <div class="chart-card map-card">
@@ -193,8 +220,12 @@
         <iframe id="station-map" class="station-map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         <div class="map-stats" id="station-map-stats"></div>
         <div class="station-map-list" id="station-map-list"></div>
-        <div class="station-edit-card">
-          <div class="section-title" style="margin-bottom:12px;">Edit station info</div>
+        <div class="station-edit-card collapsed" id="station-edit-card">
+          <div class="station-edit-header">
+            <div class="section-title">Edit station info</div>
+            <button class="small-btn" id="station-edit-toggle-btn" type="button" onclick="toggleStationEdit()">Expand</button>
+          </div>
+          <div class="station-edit-body">
           <div class="station-edit-grid">
             <div class="form-group"><label class="form-label">Station to edit</label><select class="form-select" id="edit-station-select" onchange="loadStationEditForm()"></select></div>
             <div class="form-group"><label class="form-label">Brand</label><input class="form-input" id="edit-station-brand" placeholder="Brand" /></div>
@@ -207,6 +238,7 @@
           <div class="form-actions">
             <button class="small-btn" type="button" onclick="saveStationInfoEdit()">Update all matching entries</button>
             <span class="save-msg" id="station-edit-msg"></span>
+          </div>
           </div>
         </div>
       </div>
@@ -262,6 +294,14 @@
             <label class="form-label">Total ($)</label>
             <input class="form-input" type="number" step="0.01" id="f-total" placeholder="43.74" />
           </div>
+          <div class="form-group">
+            <label class="form-label">Odometer</label>
+            <input class="form-input" type="number" step="1" id="f-odometer" placeholder="Optional" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tank status</label>
+            <label class="full-tank-row"><input type="checkbox" id="f-full-tank" checked /> Full tank</label>
+          </div>
         </div>
 
         <div class="section-title" style="margin-top:16px;">Address</div>
@@ -284,11 +324,11 @@
           </div>
         </div>
 
-        <div class="btn-row">
+        <div class="add-actions-grid">
           <button class="save-btn" onclick="addEntry()">Save fill-up</button>
           <button class="small-btn" type="button" onclick="resetAddDetails()">Reset details</button>
-          <span class="save-msg" id="save-msg"></span>
         </div>
+        <div class="btn-row" style="margin-top:10px;"><span class="save-msg" id="save-msg"></span></div>
       </div>
     </div>
 
@@ -301,9 +341,8 @@
         <div class="history-controls">
           <div class="form-group"><label class="form-label">Brand</label><select class="form-select" id="history-brand" onchange="renderHistory()"></select></div>
           <div class="form-group"><label class="form-label">Station</label><select class="form-select" id="history-station" onchange="renderHistory()"></select></div>
-          <div class="form-group"><label class="form-label">From</label><input class="form-input" type="date" id="history-date-start" onchange="renderHistory()" /></div>
-          <div class="form-group"><label class="form-label">To</label><input class="form-input" type="date" id="history-date-end" onchange="renderHistory()" /></div>
-          <div class="form-group"><label class="form-label">Sort by</label><select class="form-select" id="history-sort" onchange="renderHistory()"><option value="date">Date</option><option value="brand">Brand</option><option value="station">Station</option><option value="ppg">$/gal</option><option value="gallons">Gallons</option><option value="total">Total</option></select></div>
+          <div class="form-group date-range-group"><label class="form-label">Date range</label><div class="range-grid"><input class="form-input" type="date" id="history-date-start" onchange="renderHistory()" aria-label="Start date" /><input class="form-input" type="date" id="history-date-end" onchange="renderHistory()" aria-label="End date" /></div></div>
+          <div class="form-group"><label class="form-label">Sort by</label><select class="form-select" id="history-sort" onchange="renderHistory()"><option value="date">Date</option><option value="brand">Brand</option><option value="station">Station</option><option value="ppg">$/gal</option><option value="gallons">Gallons</option><option value="total">Total</option><option value="odometer">Odometer</option><option value="mpg">MPG</option></select></div>
           <div class="form-group"><label class="form-label">Direction</label><select class="form-select" id="history-direction" onchange="renderHistory()"><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
         </div>
         <div class="history-filter-actions"><button class="small-btn" type="button" onclick="clearHistoryFilters()">Reset history filters</button></div>
@@ -318,6 +357,8 @@
               <th>$/gal</th>
               <th>Gallons</th>
               <th>Total</th>
+              <th>Odometer</th>
+              <th>MPG</th>
               <th>Address</th>
               <th></th>
             </tr>
@@ -351,6 +392,7 @@ let entries = loadLocalEntries();
 let chartSpending;
 let chartPPG;
 let chartBrands;
+let chartMPG;
 let selectedMapStation = "";
 let calendarMonth = new Date();
 let selectedCalendarDate = "";
@@ -382,8 +424,11 @@ function normalizeEntry(e) {
   const ppg = Number(e?.ppg);
   const gallons = Number(e?.gallons);
   const total = Number(e?.total);
+  const odometerRaw = e?.odometer ?? e?.mileage ?? '';
+  const odometer = odometerRaw === '' || odometerRaw === null || typeof odometerRaw === 'undefined' ? null : Number(odometerRaw);
+  const full_tank = typeof e?.full_tank === 'undefined' ? true : Boolean(e.full_tank);
 
-  if (!brand || !station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) {
+  if (!brand || !station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total) || (odometer !== null && Number.isNaN(odometer))) {
     return null;
   }
 
@@ -397,6 +442,8 @@ function normalizeEntry(e) {
     ppg,
     gallons,
     total,
+    odometer,
+    full_tank,
     address1: String(e?.address1 || '').trim(),
     city: String(e?.city || '').trim(),
     state: String(e?.state || '').trim(),
@@ -527,6 +574,8 @@ async function saveEntryToCloud(entry) {
     ppg: entry.ppg,
     gallons: entry.gallons,
     total: entry.total,
+    odometer: entry.odometer,
+    full_tank: entry.full_tank,
     address1: entry.address1,
     city: entry.city,
     state: entry.state,
@@ -544,6 +593,8 @@ async function updateEntryInCloud(entry) {
     ppg: entry.ppg,
     gallons: entry.gallons,
     total: entry.total,
+    odometer: entry.odometer,
+    full_tank: entry.full_tank,
     address1: entry.address1,
     city: entry.city,
     state: entry.state,
@@ -618,23 +669,29 @@ function readFormEntry(prefix, existingId = null) {
   const ppg = parseFloat(document.getElementById(`${prefix}-ppg`).value);
   const gallons = parseFloat(document.getElementById(`${prefix}-gallons`).value);
   const total = parseFloat(document.getElementById(`${prefix}-total`).value);
+  const odometerEl = document.getElementById(`${prefix}-odometer`);
+  const fullTankEl = document.getElementById(`${prefix}-full-tank`);
+  const odometerValue = odometerEl ? odometerEl.value.trim() : '';
+  const odometer = odometerValue ? parseFloat(odometerValue) : null;
+  const full_tank = fullTankEl ? Boolean(fullTankEl.checked) : true;
   const address1 = document.getElementById(`${prefix}-address1`).value.trim();
   const city = document.getElementById(`${prefix}-city`).value.trim();
   const state = document.getElementById(`${prefix}-state`).value.trim().toUpperCase();
   const zip = document.getElementById(`${prefix}-zip`).value.trim();
 
-  if (!brand || !station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total)) {
+  if (!brand || !station || !date || Number.isNaN(ppg) || Number.isNaN(gallons) || Number.isNaN(total) || (odometer !== null && Number.isNaN(odometer))) {
     return null;
   }
 
-  return { id: existingId, brand, station, date, ppg, gallons, total, address1, city, state, zip };
+  return { id: existingId, brand, station, date, ppg, gallons, total, odometer, full_tank, address1, city, state, zip };
 }
 
 function clearAddForm() {
-  ['f-brand', 'f-station', 'f-ppg', 'f-gallons', 'f-total', 'f-address1', 'f-city', 'f-state', 'f-zip']
+  ['f-brand', 'f-station', 'f-ppg', 'f-gallons', 'f-total', 'f-odometer', 'f-address1', 'f-city', 'f-state', 'f-zip']
     .forEach(id => document.getElementById(id).value = '');
   ['f-brand-picker', 'f-station-picker'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
+  const fullTank = document.getElementById('f-full-tank'); if (fullTank) fullTank.checked = true;
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 }
 
@@ -743,6 +800,14 @@ function toggleHistoryFilters() {
   if (!card || !btn) return;
   const collapsed = card.classList.toggle('collapsed');
   btn.textContent = collapsed ? 'Expand filters' : 'Hide filters';
+}
+
+function toggleStationEdit() {
+  const card = document.getElementById('station-edit-card');
+  const btn = document.getElementById('station-edit-toggle-btn');
+  if (!card || !btn) return;
+  const collapsed = card.classList.toggle('collapsed');
+  btn.textContent = collapsed ? 'Expand' : 'Collapse';
 }
 
 function renderAll() {
@@ -913,12 +978,15 @@ function renderMetrics() {
   const totalSpend = data.reduce((sum, e) => sum + e.total, 0);
   const avgPPG = data.reduce((sum, e) => sum + e.ppg, 0) / data.length;
   const totalGal = data.reduce((sum, e) => sum + e.gallons, 0);
+  const mpgValues = calculateMpgSeries(data).map(item => item.mpg).filter(v => Number.isFinite(v));
+  const avgMpg = mpgValues.length ? mpgValues.reduce((sum, v) => sum + v, 0) / mpgValues.length : null;
   const last = [...data].sort(sortNewest)[0];
 
   el.innerHTML = `
     <div class="metric"><div class="metric-label">Total spent</div><div class="metric-value">$${totalSpend.toFixed(2)}</div><div class="metric-sub">${data.length} fill-up${data.length !== 1 ? 's' : ''}</div></div>
     <div class="metric"><div class="metric-label">Avg price / gal</div><div class="metric-value">$${avgPPG.toFixed(3)}</div></div>
     <div class="metric"><div class="metric-label">Total gallons</div><div class="metric-value">${totalGal.toFixed(1)}</div></div>
+    <div class="metric"><div class="metric-label">Avg MPG</div><div class="metric-value">${avgMpg ? avgMpg.toFixed(1) : '-'}</div></div>
     <div class="metric"><div class="metric-label">Last matching fill-up</div><div class="metric-value" style="font-size:15px;">${escapeHtml(last.station)}</div><div class="metric-sub">${escapeHtml(last.date)}</div></div>
   `;
 }
@@ -953,7 +1021,8 @@ function getHistoryEntries() {
   const sorted = [...data].sort((a, b) => {
     let av = a[sort];
     let bv = b[sort];
-    if (['ppg', 'gallons', 'total'].includes(sort)) return Number(av) - Number(bv);
+    if (sort === 'mpg') { av = calculateMpgForEntry(a); bv = calculateMpgForEntry(b); }
+    if (['ppg', 'gallons', 'total', 'odometer', 'mpg'].includes(sort)) return (Number.isFinite(Number(av)) ? Number(av) : -Infinity) - (Number.isFinite(Number(bv)) ? Number(bv) : -Infinity);
     return String(av || '').localeCompare(String(bv || ''));
   });
   return direction === 'desc' ? sorted.reverse() : sorted;
@@ -987,7 +1056,9 @@ function displayRow(e) {
       <td>${escapeHtml(e.station)}</td>
       <td>$${e.ppg.toFixed(3)}</td>
       <td>${e.gallons.toFixed(3)}</td>
-      <td>$${e.total.toFixed(2)}</td>
+      <td>${e.total.toFixed(2)}</td>
+      <td>${e.odometer === null || typeof e.odometer === 'undefined' ? '-' : Number(e.odometer).toLocaleString()}</td>
+      <td>${formatMpg(calculateMpgForEntry(e))}</td>
       <td>${escapeHtml(fullAddress(e))}</td>
       <td><div class="table-actions"><button class="icon-btn" onclick="startEdit('${e.id}')">Edit</button><button class="icon-btn danger" onclick="deleteEntry('${e.id}')">Delete</button></div></td>
     </tr>
@@ -1003,6 +1074,8 @@ function editRow(e) {
       <td><input class="table-input" id="e-ppg" type="number" step="0.001" value="${e.ppg}" oninput="calcTotal('e')"></td>
       <td><input class="table-input" id="e-gallons" type="number" step="0.001" value="${e.gallons}" oninput="calcTotal('e')"></td>
       <td><input class="table-input" id="e-total" type="number" step="0.01" value="${e.total}"></td>
+      <td><input class="table-input" id="e-odometer" type="number" step="1" value="${e.odometer ?? ''}"><label style="display:block;margin-top:4px;font-size:11px;"><input id="e-full-tank" type="checkbox" ${e.full_tank ? 'checked' : ''}> Full</label></td>
+      <td>${formatMpg(calculateMpgForEntry(e))}</td>
       <td>
         <input class="table-input" id="e-address1" value="${escapeHtml(e.address1)}" placeholder="Address 1" style="margin-bottom:4px;">
         <input class="table-input" id="e-city" value="${escapeHtml(e.city)}" placeholder="City" style="margin-bottom:4px;">
@@ -1254,15 +1327,65 @@ function renderCalendar() {
     <div class="calendar-entry">
       <div class="calendar-entry-title">${escapeHtml(e.brand)} · ${escapeHtml(e.station)}</div>
       <div class="calendar-entry-sub">${escapeHtml(e.date)} · ${e.total.toFixed(2)} · ${e.gallons.toFixed(3)} gal · ${e.ppg.toFixed(3)}/gal</div>
+      ${e.odometer ? `<div class="calendar-entry-sub">Odometer: ${Number(e.odometer).toLocaleString()} · MPG: ${formatMpg(calculateMpgForEntry(e))}</div>` : ''}
       ${fullAddress(e) ? `<div class="calendar-entry-sub">${escapeHtml(fullAddress(e))}</div>` : ''}
     </div>
   `).join('');
+}
+
+
+function sortedByDateAsc(data = entries) {
+  return [...data].sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.created_at || '').localeCompare(String(b.created_at || '')));
+}
+
+function calculateMpgSeries(data = entries) {
+  const results = [];
+  let lastFull = null;
+  let gallonsSinceLastFull = 0;
+  sortedByDateAsc(data).forEach(e => {
+    if (e.odometer === null || typeof e.odometer === 'undefined' || Number.isNaN(Number(e.odometer))) return;
+    gallonsSinceLastFull += Number(e.gallons) || 0;
+    if (e.full_tank) {
+      if (lastFull) {
+        const miles = Number(e.odometer) - Number(lastFull.odometer);
+        if (miles > 0 && gallonsSinceLastFull > 0) {
+          results.push({ id: e.id, date: e.date, mpg: miles / gallonsSinceLastFull, miles, gallons: gallonsSinceLastFull });
+        }
+      }
+      lastFull = e;
+      gallonsSinceLastFull = 0;
+    }
+  });
+  return results;
+}
+
+function calculateMpgForEntry(entry) {
+  const match = calculateMpgSeries(entries).find(item => String(item.id) === String(entry.id));
+  return match ? match.mpg : null;
+}
+
+function formatMpg(value) {
+  return Number.isFinite(Number(value)) ? Number(value).toFixed(1) : '-';
+}
+
+function groupMpgByTime(data) {
+  const view = document.getElementById('filter-time-view')?.value || 'month';
+  const groups = new Map();
+  calculateMpgSeries(data).forEach(item => {
+    const bucket = timeBucket(item.date, view);
+    if (!groups.has(bucket.key)) groups.set(bucket.key, { key: bucket.key, label: bucket.label, weighted: 0, gallons: 0 });
+    const g = groups.get(bucket.key);
+    g.weighted += item.mpg * item.gallons;
+    g.gallons += item.gallons;
+  });
+  return [...groups.values()].sort((a,b) => a.key.localeCompare(b.key)).map(g => ({ ...g, mpg: g.gallons ? Number((g.weighted / g.gallons).toFixed(1)) : null }));
 }
 
 function renderCharts() {
   if (chartSpending) chartSpending.destroy();
   if (chartPPG) chartPPG.destroy();
   if (chartBrands) chartBrands.destroy();
+  if (chartMPG) chartMPG.destroy();
 
   const data = getFilteredEntries();
   if (!data.length) return;
@@ -1313,6 +1436,16 @@ function renderCharts() {
     data: { labels: brandLabels, datasets: [{ data: brandData, backgroundColor: brandLabels.map((_, i) => palette[i % palette.length]), borderWidth: 2, borderColor: dark ? '#1c1c1f' : '#fff' }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: tick, font: { size: 11 }, boxWidth: 10, padding: 8 } } } }
   });
+
+  const mpgGrouped = groupMpgByTime(data);
+  const mpgCanvas = document.getElementById('chart-mpg');
+  if (mpgCanvas) {
+    chartMPG = new Chart(mpgCanvas, {
+      type: 'line',
+      data: { labels: mpgGrouped.map(i => i.label), datasets: [{ data: mpgGrouped.map(i => i.mpg), borderColor: '#1a6eb5', backgroundColor: 'rgba(26,110,181,0.1)', tension: 0.3, pointRadius: 4, fill: true }] },
+      options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => Number(v).toFixed(1) + ' mpg' } } } }
+    });
+  }
 }
 
 
