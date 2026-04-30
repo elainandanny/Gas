@@ -171,7 +171,7 @@
   /* AI chat tab */
   .chat-card { margin-top:16px; }
   .chat-window { min-height:320px; max-height:52vh; overflow:auto; display:flex; flex-direction:column; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.08); border-radius:16px; background:rgba(255,255,255,0.55); }
-  .chat-message { max-width:88%; border-radius:16px; padding:10px 12px; line-height:1.35; white-space:pre-wrap; }
+  .chat-message { max-width:88%; border-radius:16px; padding:10px 12px; line-height:1.45; white-space:normal; overflow-wrap:anywhere; }
   .chat-message.user { align-self:flex-end; background:#e8c840; color:#171717; }
   .chat-message.assistant { align-self:flex-start; background:rgba(0,0,0,0.055); }
   .chat-message.system { align-self:center; max-width:100%; color:#777; background:transparent; font-size:13px; text-align:center; }
@@ -420,7 +420,7 @@
     <div id="tab-chat" class="panel">
       <div class="chart-card chat-card">
         <div class="section-title">AI gas data chat</div>
-        <div class="banner info-banner" style="margin:10px 0 12px;">Ask questions about your fill-ups, spending, stations, price trends, MPG, or calendar history. The chat uses your loaded gas entries only.</div>
+        <div class="banner info-banner" style="margin:10px 0 12px;">Ask questions about your fill-ups, spending, stations, price trends, MPG, or calendar history. Answers stream in and use your loaded gas entries.</div>
         <div class="chat-window" id="chat-window">
           <div class="chat-message system">Try: “Which station is cheapest?” or “How much did I spend by month?”</div>
         </div>
@@ -1608,8 +1608,45 @@ function renderChatMessages() {
     win.innerHTML = '<div class="chat-message system">Try: “Which station is cheapest?” or “How much did I spend by month?”</div>';
     return;
   }
-  win.innerHTML = chatMessages.map(m => `<div class="chat-message ${escapeHtml(m.role)}">${escapeHtml(m.content)}</div>`).join('');
+
+  win.innerHTML = chatMessages.map(m => {
+    const role = ['user', 'assistant', 'system'].includes(m.role) ? m.role : 'system';
+    const content = role === 'assistant' ? formatAIResponse(m.content) : escapeHtml(m.content);
+    return `<div class="chat-message ${role}">${content}</div>`;
+  }).join('');
   win.scrollTop = win.scrollHeight;
+}
+
+function formatAIResponse(value) {
+  let text = String(value ?? '');
+
+  // Clean up markdown that can look noisy in chat bubbles.
+  text = text
+    .replace(/
+/g, '')
+    .replace(/\*\*/g, '')
+    .replace(/^\s*[-*]\s+/gm, '• ')
+    .replace(/
+\s*•/g, '
+•')
+    .replace(/([a-z])([A-Z][a-z])/g, '$1 $2')
+    .replace(/([.!?])([A-Z])/g, '$1 $2')
+    .replace(/([,:;])([A-Za-z])/g, '$1 $2')
+    .trim();
+
+  if (!text) return 'Thinking...';
+
+  // Escape first, then add simple line breaks. This keeps user data safe while allowing readable formatting.
+  return escapeHtml(text)
+    .replace(/
+{3,}/g, '
+
+')
+    .replace(/
+
+/g, '<br><br>')
+    .replace(/
+/g, '<br>');
 }
 
 function compactEntriesForAI() {
@@ -1762,4 +1799,4 @@ document.getElementById('f-date').value = new Date().toISOString().split('T')[0]
 init();
 </script>
 </body>
-</html>
+</html>  
