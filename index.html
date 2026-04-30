@@ -483,6 +483,7 @@ const STORAGE_KEY = 'gas-tracker-entries-v5';
 // Supabase Dashboard -> Project Settings -> API
 const SUPABASE_URL = 'https://ykedfxitevfpioplirdy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZWRmeGl0ZXZmcGlvcGxpcmR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjQ4ODIsImV4cCI6MjA5MzA0MDg4Mn0.EmfBzmig_fkITR2Uw5MPxkjvFTzwlevkTzbUCKgwI5o';
+const GAS_CHAT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gas-chat`;
 
 const supabaseReady =
   !SUPABASE_URL.includes('PASTE_') &&
@@ -1630,31 +1631,59 @@ async function askGasAgent() {
   const btn = document.getElementById('chat-send-btn');
   const msg = document.getElementById('chat-msg');
   const question = (input?.value || '').trim();
+
   if (!question) return;
+
   if (!currentUser || !supabaseClient) {
     msg.textContent = 'Log in first so the chat can securely use your gas data.';
     msg.style.color = 'var(--danger)';
     return;
   }
+
   appendChat('user', question);
   input.value = '';
   btn.disabled = true;
   btn.textContent = 'Thinking...';
   msg.textContent = '';
+
   try {
-    const recentMessages = chatMessages.slice(-8).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
-    const { data, error } = await supabaseClient.functions.invoke('gas-chat', {
-      body: {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const accessToken = sessionData?.session?.access_token || '';
+
+    const recentMessages = chatMessages
+      .slice(-8)
+      .map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content
+      }));
+
+    const response = await fetch(GAS_CHAT_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+      },
+      body: JSON.stringify({
         question,
         messages: recentMessages,
         entries: compactEntriesForAI()
-      }
+      })
     });
-    if (error) throw error;
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const backendMessage = data?.error || data?.message || `Request failed with status ${response.status}`;
+      throw new Error(backendMessage);
+    }
+
     appendChat('assistant', data?.answer || 'I could not generate an answer.');
   } catch (err) {
     console.error('AI chat failed:', err);
-    appendChat('assistant', 'I could not reach the secure AI backend. Make sure the Supabase Edge Function named gas-chat is deployed and GEMINI_API_KEY is saved as a Supabase secret.');
+    appendChat('assistant', `AI chat error: ${err?.message || 'Unknown error'}`);
+    msg.textContent = 'AI chat failed. Check the Supabase gas-chat function logs for details.';
+    msg.style.color = 'var(--danger)';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Send';
