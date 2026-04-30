@@ -1487,7 +1487,7 @@ function groupMpgByTime(data) {
   const view = document.getElementById('filter-time-view')?.value || 'month';
   const groups = new Map();
   calculateMpgSeries(data).forEach(item => {
-    const bucket = timeBucket(item.date, view);
+    const bucket = getTimeBucket(item.date);
     if (!groups.has(bucket.key)) groups.set(bucket.key, { key: bucket.key, label: bucket.label, weighted: 0, gallons: 0 });
     const g = groups.get(bucket.key);
     g.weighted += item.mpg * item.gallons;
@@ -1622,13 +1622,10 @@ function formatAIResponse(value) {
 
   // Clean up markdown that can look noisy in chat bubbles.
   text = text
-    .replace(/
-/g, '')
+    .replace(/\r/g, '')
     .replace(/\*\*/g, '')
     .replace(/^\s*[-*]\s+/gm, '• ')
-    .replace(/
-\s*•/g, '
-•')
+    .replace(/\n\s*•/g, '\n•')
     .replace(/([a-z])([A-Z][a-z])/g, '$1 $2')
     .replace(/([.!?])([A-Z])/g, '$1 $2')
     .replace(/([,:;])([A-Za-z])/g, '$1 $2')
@@ -1638,15 +1635,9 @@ function formatAIResponse(value) {
 
   // Escape first, then add simple line breaks. This keeps user data safe while allowing readable formatting.
   return escapeHtml(text)
-    .replace(/
-{3,}/g, '
-
-')
-    .replace(/
-
-/g, '<br><br>')
-    .replace(/
-/g, '<br>');
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
 }
 
 function compactEntriesForAI() {
@@ -1799,4 +1790,4 @@ document.getElementById('f-date').value = new Date().toISOString().split('T')[0]
 init();
 </script>
 </body>
-</html>  
+</html>
