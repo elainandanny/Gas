@@ -1626,10 +1626,42 @@ function compactEntriesForAI() {
   }));
 }
 
+function extractGeminiStreamText(rawChunk) {
+  const chunk = String(rawChunk || '');
+  let text = '';
+
+  // Gemini streaming can arrive as SSE lines, JSON objects, JSON arrays, or partial JSON chunks.
+  // This parser is intentionally tolerant so the UI still updates instead of showing raw JSON.
+  const lines = chunk.split('\n').map(line => line.trim()).filter(Boolean);
+  for (const line of lines) {
+    let payload = line.startsWith('data:') ? line.slice(5).trim() : line;
+    if (!payload || payload === '[DONE]') continue;
+
+    try {
+      const parsed = JSON.parse(payload);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      for (const item of items) {
+        const parts = item?.candidates?.[0]?.content?.parts || [];
+        for (const part of parts) {
+          if (typeof part?.text === 'string') text += part.text;
+        }
+      }
+    } catch {
+      // If the backend streams plain text, use it directly.
+      if (!payload.includes('"candidates"') && !payload.includes('"content"')) {
+        text += payload;
+      }
+    }
+  }
+
+  return text;
+}
+
 async function askGasAgent() {
   const input = document.getElementById('chat-question');
   const btn = document.getElementById('chat-send-btn');
   const msg = document.getElementById('chat-msg');
+  const win = document.getElementById('chat-window');
   const question = (input?.value || '').trim();
 
   if (!question) return;
@@ -1643,19 +1675,16 @@ async function askGasAgent() {
   appendChat('user', question);
   input.value = '';
   btn.disabled = true;
-  btn.textContent = 'Thinking...';
+  btn.textContent = 'Streaming...';
   msg.textContent = '';
+
+  const assistantMessage = { role: 'assistant', content: '' };
+  chatMessages.push(assistantMessage);
+  renderChatMessages();
 
   try {
     const { data: sessionData } = await supabaseClient.auth.getSession();
     const accessToken = sessionData?.session?.access_token || '';
-
-    const recentMessages = chatMessages
-      .slice(-8)
-      .map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content
-      }));
 
     const response = await fetch(GAS_CHAT_FUNCTION_URL, {
       method: 'POST',
@@ -1666,22 +1695,60 @@ async function askGasAgent() {
       },
       body: JSON.stringify({
         question,
-        messages: recentMessages,
         entries: compactEntriesForAI()
       })
     });
 
-    const data = await response.json().catch(() => ({}));
-
     if (!response.ok) {
-      const backendMessage = data?.error || data?.message || `Request failed with status ${response.status}`;
+      const errorData = await response.json().catch(() => ({}));
+      const backendMessage = errorData?.error || errorData?.message || `Request failed with status ${response.status}`;
       throw new Error(backendMessage);
     }
 
-    appendChat('assistant', data?.answer || 'I could not generate an answer.');
+    if (!response.body) {
+      const data = await response.json().catch(() => ({}));
+      assistantMessage.content = data?.answer || 'I could not generate an answer.';
+      renderChatMessages();
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let streamedText = '';
+    let rawFallback = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      rawFallback += chunk;
+      const extracted = extractGeminiStreamText(chunk);
+
+      if (extracted) {
+        streamedText += extracted;
+        assistantMessage.content = streamedText;
+      } else if (!streamedText) {
+        assistantMessage.content = 'Thinking...';
+      }
+
+      renderChatMessages();
+      if (win) win.scrollTop = win.scrollHeight;
+    }
+
+    if (!streamedText) {
+      try {
+        const parsed = JSON.parse(rawFallback);
+        assistantMessage.content = parsed?.answer || parsed?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || 'I could not generate an answer.';
+      } catch {
+        assistantMessage.content = rawFallback.trim() || 'I could not generate an answer.';
+      }
+      renderChatMessages();
+    }
   } catch (err) {
     console.error('AI chat failed:', err);
-    appendChat('assistant', `AI chat error: ${err?.message || 'Unknown error'}`);
+    assistantMessage.content = `AI chat error: ${err?.message || 'Unknown error'}`;
+    renderChatMessages();
     msg.textContent = 'AI chat failed. Check the Supabase gas-chat function logs for details.';
     msg.style.color = 'var(--danger)';
   } finally {
