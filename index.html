@@ -191,6 +191,11 @@
   .chat-followups { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
   .chat-followup { border:1px solid rgba(232,200,64,0.5); border-radius:999px; background:rgba(232,200,64,0.12); padding:7px 12px; font:inherit; font-size:13px; cursor:pointer; color:#6b5800; transition:background 0.15s; }
   .chat-followup:hover { background:rgba(232,200,64,0.28); }
+  .chat-thinking { display:inline-flex; align-items:center; gap:5px; padding:2px 0; }
+  .chat-thinking span { width:7px; height:7px; border-radius:50%; background:currentColor; opacity:0.35; animation:chatDot 1.2s infinite ease-in-out; }
+  .chat-thinking span:nth-child(2) { animation-delay:0.2s; }
+  .chat-thinking span:nth-child(3) { animation-delay:0.4s; }
+  @keyframes chatDot { 0%,80%,100%{opacity:0.2;transform:scale(0.85)} 40%{opacity:0.9;transform:scale(1.15)} }
   @media (max-width:640px) {
     .tabs { grid-template-columns:repeat(4,minmax(0,1fr)); }
     .tab { padding-left:6px; padding-right:6px; font-size:14px; }
@@ -1603,6 +1608,13 @@ function useChatHint(text) {
   input.focus();
 }
 
+function useAndSendChatHint(text) {
+  const input = document.getElementById('chat-question');
+  if (!input) return;
+  input.value = text;
+  askGasAgent();
+}
+
 function handleChatKey(event) {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
@@ -1652,7 +1664,7 @@ function formatAIContent(content, role = 'assistant') {
     .replace(/^(Summary:|Details:|Recommendation:|Recommendations:|Insight:|Insights:|Note:|Savings:|Next steps:)$/gim, '<strong>$1</strong>')
     .replace(/\n/g, '<br>');
 
-  return html || 'I could not generate an answer.';
+  return html || '';
 }
 
 function renderChatMessages() {
@@ -1677,10 +1689,13 @@ function renderChatMessages() {
       return `<div class="chat-message system">${escapeHtml(m.content)}</div>`;
     }
     const label = m.role === 'user' ? 'You' : 'AI';
-    const msgHtml = formatAIContent(m.content, m.role);
+    const isThinking = m.role === 'assistant' && (!m.content || m.content === 'Thinking...');
+    const msgHtml = isThinking
+      ? `<span class="chat-thinking"><span></span><span></span><span></span></span>`
+      : formatAIContent(m.content, m.role);
     const isLastAssistant = idx === lastAssistantIdx;
     const followups = (isLastAssistant && chatFollowUps && chatFollowUps.length)
-      ? `<div class="chat-followups">${chatFollowUps.map(q => `<button class="chat-followup" type="button" onclick="useChatHint(${JSON.stringify(q)})">${escapeHtml(q)}</button>`).join('')}</div>`
+      ? `<div class="chat-followups">${chatFollowUps.map(q => `<button class="chat-followup" type="button" onclick="useAndSendChatHint(${JSON.stringify(q)})">${escapeHtml(q)}</button>`).join('')}</div>`
       : '';
     return `<div class="chat-bubble-wrap ${escapeHtml(m.role)}">
       <div class="chat-bubble-label">${label}</div>
@@ -1881,7 +1896,7 @@ async function askGasAgent() {
 
     if (!response.body) {
       const data = await response.json().catch(() => ({}));
-      assistantMessage.content = data?.answer || 'I could not generate an answer.';
+      assistantMessage.content = data?.answer || '';
       renderChatMessages();
       return;
     }
@@ -1913,7 +1928,7 @@ async function askGasAgent() {
     if (!streamedText) {
       try {
         const parsed = JSON.parse(rawFallback);
-        assistantMessage.content = parsed?.answer || parsed?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || 'I could not generate an answer.';
+        assistantMessage.content = parsed?.answer || parsed?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
       } catch {
         assistantMessage.content = rawFallback.trim() || 'I could not generate an answer.';
       }
