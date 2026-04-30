@@ -1643,9 +1643,15 @@ function formatAIContent(content, role = 'assistant') {
   // ── 1. Normalise line endings ──────────────────────────────────────────────
   let text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  // ── 2. Strip markdown cruft we don't want rendered ─────────────────────────
+  // ── 2. Strip "Summary:" / "Details:" labels and related cruft ─────────────
+  // Remove lines that are just "Summary:", "Details:", "Summary", "Details"
+  text = text.replace(/^(Summary|Details)\s*:\s*/gim, '');
+  // Remove inline occurrences like "Summary:You spent..." → "You spent..."
+  text = text.replace(/(Summary|Details)\s*:\s*/gi, '');
   // Remove horizontal rules
   text = text.replace(/^[-*_]{3,}\s*$/gm, '');
+  // Treat single newlines as paragraph breaks (normalize to double newline)
+  text = text.replace(/([^\n])\n([^\n])/g, '$1\n\n$2');
   // Collapse 3+ newlines to 2
   text = text.replace(/\n{3,}/g, '\n\n');
 
@@ -1755,7 +1761,7 @@ function renderChatMessages() {
       : formatAIContent(m.content, m.role);
     const isLastAssistant = idx === lastAssistantIdx;
     const followups = (isLastAssistant && chatFollowUps && chatFollowUps.length)
-      ? `<div class="chat-followups">${chatFollowUps.map(q => `<button class="chat-followup" type="button" onclick="useAndSendChatHint(${JSON.stringify(q)})">${escapeHtml(q)}</button>`).join('')}</div>`
+      ? `<div class="chat-followups">${chatFollowUps.map(q => `<button class="chat-followup" type="button" data-hint="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('')}</div>`
       : '';
     return `<div class="chat-bubble-wrap ${escapeHtml(m.role)}">
       <div class="chat-bubble-label">${label}</div>
@@ -2065,6 +2071,15 @@ AI answered: ${answer.slice(0, 300)}`;
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 init();
+
+// Event delegation for follow-up suggestion buttons
+document.addEventListener("click", function(e) {
+  var btn = e.target.closest("button.chat-followup[data-hint]");
+  if (btn) {
+    var hint = btn.getAttribute("data-hint");
+    if (hint) useAndSendChatHint(hint);
+  }
+});
 </script>
 </body>
 </html>
