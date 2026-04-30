@@ -168,6 +168,24 @@
     .date-range-group .range-grid .form-input { height:52px !important; font-size:13px !important; padding:0 3px !important; }
   }
 
+  /* AI chat tab */
+  .chat-card { margin-top:16px; }
+  .chat-window { min-height:320px; max-height:52vh; overflow:auto; display:flex; flex-direction:column; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.08); border-radius:16px; background:rgba(255,255,255,0.55); }
+  .chat-message { max-width:88%; border-radius:16px; padding:10px 12px; line-height:1.35; white-space:pre-wrap; }
+  .chat-message.user { align-self:flex-end; background:#e8c840; color:#171717; }
+  .chat-message.assistant { align-self:flex-start; background:rgba(0,0,0,0.055); }
+  .chat-message.system { align-self:center; max-width:100%; color:#777; background:transparent; font-size:13px; text-align:center; }
+  .chat-input-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; margin-top:12px; align-items:end; }
+  .chat-input-row textarea { min-height:58px; resize:vertical; }
+  .chat-hints { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .chat-hint { border:1px solid rgba(0,0,0,0.08); border-radius:999px; background:rgba(255,255,255,0.72); padding:8px 10px; font:inherit; font-size:13px; cursor:pointer; }
+  @media (max-width:640px) {
+    .tabs { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .tab { padding-left:6px; padding-right:6px; font-size:14px; }
+    .chat-input-row { grid-template-columns:1fr; }
+    .chat-message { max-width:96%; }
+  }
+
 </style>
 
 </head>
@@ -212,6 +230,7 @@
       <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
       <button class="tab" onclick="switchTab('log')">Add Fill-Up</button>
       <button class="tab" onclick="switchTab('history')">History</button>
+      <button class="tab" onclick="switchTab('chat')">AI Chat</button>
     </div>
 
     <div id="tab-dashboard" class="panel active">
@@ -396,6 +415,29 @@
       </div>
     </div>
 
+
+
+    <div id="tab-chat" class="panel">
+      <div class="chart-card chat-card">
+        <div class="section-title">AI gas data chat</div>
+        <div class="banner info-banner" style="margin:10px 0 12px;">Ask questions about your fill-ups, spending, stations, price trends, MPG, or calendar history. The chat uses your loaded gas entries only.</div>
+        <div class="chat-window" id="chat-window">
+          <div class="chat-message system">Try: “Which station is cheapest?” or “How much did I spend by month?”</div>
+        </div>
+        <div class="chat-hints">
+          <button class="chat-hint" type="button" onclick="useChatHint('Which brand has my lowest average price per gallon?')">Cheapest brand</button>
+          <button class="chat-hint" type="button" onclick="useChatHint('How much did I spend each month?')">Monthly spend</button>
+          <button class="chat-hint" type="button" onclick="useChatHint('Which station do I visit most often?')">Most visited station</button>
+          <button class="chat-hint" type="button" onclick="useChatHint('Summarize my MPG trend and call out any outliers.')">MPG trend</button>
+        </div>
+        <div class="chat-input-row">
+          <textarea class="form-input" id="chat-question" placeholder="Ask about your gas data..." onkeydown="handleChatKey(event)"></textarea>
+          <button class="save-btn" id="chat-send-btn" type="button" onclick="askGasAgent()">Send</button>
+        </div>
+        <div class="save-msg" id="chat-msg" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
     <div id="tab-history" class="panel">
       <div class="filter-card history-filter-card collapsed" id="history-filter-card">
         <div class="filter-header" style="margin-bottom:12px;">
@@ -461,6 +503,7 @@ let selectedMapStation = "";
 let calendarMonth = new Date();
 let selectedCalendarDate = "";
 let editingId = null;
+let chatMessages = [];
 
 function loadLocalEntries() {
   try {
@@ -690,7 +733,7 @@ async function deleteEntryFromCloud(id) {
 }
 
 function switchTab(name) {
-  const names = ['dashboard', 'log', 'history'];
+  const names = ['dashboard', 'log', 'history', 'chat'];
   document.querySelectorAll('.tab').forEach((tab, i) => tab.classList.toggle('active', names[i] === name));
   document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
@@ -1536,6 +1579,88 @@ function escapeHtml(value) {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 }
+
+
+function useChatHint(text) {
+  const input = document.getElementById('chat-question');
+  if (!input) return;
+  input.value = text;
+  input.focus();
+}
+
+function handleChatKey(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    askGasAgent();
+  }
+}
+
+function appendChat(role, content) {
+  chatMessages.push({ role, content });
+  renderChatMessages();
+}
+
+function renderChatMessages() {
+  const win = document.getElementById('chat-window');
+  if (!win) return;
+  if (!chatMessages.length) {
+    win.innerHTML = '<div class="chat-message system">Try: “Which station is cheapest?” or “How much did I spend by month?”</div>';
+    return;
+  }
+  win.innerHTML = chatMessages.map(m => `<div class="chat-message ${escapeHtml(m.role)}">${escapeHtml(m.content)}</div>`).join('');
+  win.scrollTop = win.scrollHeight;
+}
+
+function compactEntriesForAI() {
+  return entries.map(e => ({
+    date: e.date,
+    brand: e.brand,
+    station: e.station,
+    price_per_gallon: e.ppg,
+    gallons: e.gallons,
+    total: e.total,
+    odometer: e.odometer,
+    full_tank: e.full_tank,
+    address: fullAddress(e)
+  }));
+}
+
+async function askGasAgent() {
+  const input = document.getElementById('chat-question');
+  const btn = document.getElementById('chat-send-btn');
+  const msg = document.getElementById('chat-msg');
+  const question = (input?.value || '').trim();
+  if (!question) return;
+  if (!currentUser || !supabaseClient) {
+    msg.textContent = 'Log in first so the chat can securely use your gas data.';
+    msg.style.color = 'var(--danger)';
+    return;
+  }
+  appendChat('user', question);
+  input.value = '';
+  btn.disabled = true;
+  btn.textContent = 'Thinking...';
+  msg.textContent = '';
+  try {
+    const recentMessages = chatMessages.slice(-8).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
+    const { data, error } = await supabaseClient.functions.invoke('gas-chat', {
+      body: {
+        question,
+        messages: recentMessages,
+        entries: compactEntriesForAI()
+      }
+    });
+    if (error) throw error;
+    appendChat('assistant', data?.answer || 'I could not generate an answer.');
+  } catch (err) {
+    console.error('AI chat failed:', err);
+    appendChat('assistant', 'I could not reach the secure AI backend. Make sure the Supabase Edge Function named gas-chat is deployed and OPENAI_API_KEY is saved as a Supabase secret.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send';
+  }
+}
+
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 init();
