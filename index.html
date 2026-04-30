@@ -184,6 +184,14 @@
   .chat-message.assistant strong { display:block; font-weight:800; margin:10px 0 4px; }
   .chat-message.assistant strong:first-child { margin-top:0; }
   .chat-message.assistant { word-break:normal; overflow-wrap:anywhere; }
+  .chat-message.assistant p { margin:0 0 8px; line-height:1.55; }
+  .chat-message.assistant p:last-child { margin-bottom:0; }
+  .chat-message.assistant ul { margin:4px 0 8px 0; padding-left:18px; display:flex; flex-direction:column; gap:4px; }
+  .chat-message.assistant li { line-height:1.5; }
+  .chat-message.assistant p.ai-label { font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:#888; margin:10px 0 2px; }
+  .chat-message.assistant p.ai-label:first-child { margin-top:0; }
+  .chat-message.assistant code { background:rgba(0,0,0,0.07); border-radius:4px; padding:1px 5px; font-size:0.88em; font-family:monospace; }
+  .chat-message.assistant .ai-num { font-weight:700; color:#5a4400; }
   .chat-input-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; margin-top:12px; align-items:end; }
   .chat-input-row textarea { min-height:58px; resize:vertical; }
   .chat-hints { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
@@ -443,10 +451,10 @@
           <div class="chat-message system">Try: “Which station is cheapest?” or “How much did I spend by month?”</div>
         </div>
         <div class="chat-hints">
-          <button class="chat-hint" type="button" onclick="useChatHint('Which brand has my lowest average price per gallon?')">Cheapest brand</button>
-          <button class="chat-hint" type="button" onclick="useChatHint('How much did I spend each month?')">Monthly spend</button>
-          <button class="chat-hint" type="button" onclick="useChatHint('Which station do I visit most often?')">Most visited station</button>
-          <button class="chat-hint" type="button" onclick="useChatHint('Summarize my MPG trend and call out any outliers.')">MPG trend</button>
+          <button class="chat-hint" type="button" onclick="useAndSendChatHint('Which brand has my lowest average price per gallon?')">Cheapest brand</button>
+          <button class="chat-hint" type="button" onclick="useAndSendChatHint('How much did I spend each month?')">Monthly spend</button>
+          <button class="chat-hint" type="button" onclick="useAndSendChatHint('Which station do I visit most often?')">Most visited station</button>
+          <button class="chat-hint" type="button" onclick="useAndSendChatHint('Summarize my MPG trend and call out any outliers.')">MPG trend</button>
         </div>
         <div class="chat-input-row">
           <textarea class="form-input" id="chat-question" placeholder="Ask about your gas data..." onkeydown="handleChatKey(event)"></textarea>
@@ -1629,42 +1637,94 @@ function appendChat(role, content) {
 
 function formatAIContent(content, role = 'assistant') {
   const raw = String(content || '');
+  if (role !== 'assistant') return escapeHtml(raw);
+  if (!raw.trim()) return '';
 
-  if (role !== 'assistant') {
-    return escapeHtml(raw);
+  // ── 1. Normalise line endings ──────────────────────────────────────────────
+  let text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // ── 2. Strip markdown cruft we don't want rendered ─────────────────────────
+  // Remove horizontal rules
+  text = text.replace(/^[-*_]{3,}\s*$/gm, '');
+  // Collapse 3+ newlines to 2
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // ── 3. Split into blocks (paragraphs / list runs) ──────────────────────────
+  const rawBlocks = text.trim().split(/\n{2,}/);
+  const htmlParts = [];
+
+  for (const block of rawBlocks) {
+    const trimmed = block.trim();
+    if (!trimmed) continue;
+
+    // Detect if this block is entirely list lines (-, *, •, numbers)
+    const lines = trimmed.split('\n');
+    const isListBlock = lines.length > 1 && lines.every(l => /^\s*([•●▪◦\-*]|\d+[.):])\s/.test(l));
+
+    if (isListBlock) {
+      const items = lines.map(l => {
+        const itemText = l.replace(/^\s*([•●▪◦\-*]|\d+[.):])\s*/, '').trim();
+        return `<li>${inlineFormat(itemText)}</li>`;
+      }).join('');
+      htmlParts.push(`<ul>${items}</ul>`);
+      continue;
+    }
+
+    // Detect a heading-style line: short (≤60 chars), ends without sentence punct,
+    // followed by more content — treat as a subtle label, not a loud header
+    if (lines.length === 1 && /^[A-Z*#]/.test(trimmed)) {
+      // Strip markdown heading markers and bold markers
+      const cleaned = trimmed.replace(/^#+\s*/, '').replace(/\*\*/g, '').replace(/:/g, '').trim();
+      // Only treat as a label if it's short and looks like a heading (no mid-sentence punctuation)
+      if (cleaned.length <= 55 && !/[.!?]/.test(cleaned)) {
+        htmlParts.push(`<p class="ai-label">${escapeHtml(cleaned)}</p>`);
+        continue;
+      }
+    }
+
+    // Mixed block: may have some bullet lines mixed with prose
+    const hasBullets = lines.some(l => /^\s*([•●▪◦\-*]|\d+[.):])\s/.test(l));
+    if (hasBullets) {
+      let html = '';
+      let inList = false;
+      for (const line of lines) {
+        const isBullet = /^\s*([•●▪◦\-*]|\d+[.):])\s/.test(line);
+        if (isBullet) {
+          if (!inList) { html += '<ul>'; inList = true; }
+          const itemText = line.replace(/^\s*([•●▪◦\-*]|\d+[.):])\s*/, '').trim();
+          html += `<li>${inlineFormat(itemText)}</li>`;
+        } else {
+          if (inList) { html += '</ul>'; inList = false; }
+          if (line.trim()) html += `<p>${inlineFormat(line.trim())}</p>`;
+        }
+      }
+      if (inList) html += '</ul>';
+      htmlParts.push(html);
+      continue;
+    }
+
+    // Plain prose block — join lines into a single paragraph
+    const para = lines.map(l => l.trim()).join(' ');
+    htmlParts.push(`<p>${inlineFormat(para)}</p>`);
   }
 
-  let cleaned = raw
-    // Remove markdown emphasis.
-    .replace(/\*\*/g, '')
-    .replace(/__/g, '')
+  return htmlParts.join('') || '';
+}
 
-    // Convert Gemini bullet separators into line breaks instead of showing dots/bullets.
-    // Preserve the word after the bullet by ensuring a newline (not stripping the space into nothing).
-    .replace(/[•●▪◦]\s*/g, '\n')
-    .replace(/(^|\n)\s*[-*]\s+/g, '$1\n')
-
-    // Make section labels start cleanly on their own lines.
-    .replace(/\s*(Summary:|Details:|Recommendation:|Recommendations:|Insight:|Insights:|Note:|Savings:|Next steps:)\s*/gi, '\n\n$1\n')
-
-    // If the model runs a section label into the previous sentence, split it.
-    .replace(/([a-z0-9.)])\s*(Summary:|Details:|Recommendation:|Recommendations:|Insight:|Insights:|Note:|Savings:|Next steps:)/gi, '$1\n\n$2')
-
-    // Put normal sentences on separate lines without breaking decimals like 3.77.
-    .replace(/([.!?])\s+(?=[A-Z])/g, '$1\n')
-
-    // Clean repeated spaces but preserve line breaks.
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n[ \t]+/g, '\n')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  let html = escapeHtml(cleaned)
-    .replace(/^(Summary:|Details:|Recommendation:|Recommendations:|Insight:|Insights:|Note:|Savings:|Next steps:)$/gim, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
-
-  return html || '';
+// Render inline markdown: **bold**, *italic*, `code`, numbers/prices highlighted
+function inlineFormat(text) {
+  let s = escapeHtml(text);
+  // Bold
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  // Italic
+  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  s = s.replace(/_([^_]+)_/g, '<em>$1</em>');
+  // Inline code
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Highlight dollar amounts and numbers that look like data points
+  s = s.replace(/(\$[\d,]+(?:\.\d+)?)/g, '<span class="ai-num">$1</span>');
+  return s;
 }
 
 function renderChatMessages() {
