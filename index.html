@@ -1739,21 +1739,88 @@ function extractGeminiStreamText(rawChunk) {
 
 function friendlyAIError(error, status = null) {
   const text = String(error?.message || error || '');
+  const lower = text.toLowerCase();
 
+  // Gemini API rate limit / quota exhausted
   if (
     status === 429 ||
     text.includes('429') ||
     text.includes('RESOURCE_EXHAUSTED') ||
-    text.toLowerCase().includes('quota') ||
-    text.toLowerCase().includes('rate limit') ||
-    text.toLowerCase().includes('high demand')
+    lower.includes('quota') ||
+    lower.includes('rate limit') ||
+    lower.includes('high demand')
   ) {
     const retryAt = new Date(Date.now() + 60 * 1000);
     const retryStr = retryAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return `Your AI limit has been reached. Please try again at ${retryStr}.`;
+    return `The Gemini AI usage limit has been reached. This is a temporary quota restriction — please try again after ${retryStr}.`;
   }
 
-  return 'I could not answer that right now. Please try again.';
+  // Auth / permission errors
+  if (
+    status === 401 ||
+    status === 403 ||
+    text.includes('401') ||
+    text.includes('403') ||
+    lower.includes('unauthorized') ||
+    lower.includes('forbidden') ||
+    lower.includes('api key') ||
+    lower.includes('invalid key') ||
+    lower.includes('permission denied')
+  ) {
+    return 'Authentication failed. The AI service key may be invalid or expired — please contact support.';
+  }
+
+  // Service unavailable / gateway errors
+  if (
+    status === 503 ||
+    status === 502 ||
+    status === 504 ||
+    text.includes('503') ||
+    text.includes('502') ||
+    text.includes('504') ||
+    lower.includes('service unavailable') ||
+    lower.includes('bad gateway') ||
+    lower.includes('gateway timeout') ||
+    lower.includes('overloaded')
+  ) {
+    return 'The AI service is temporarily unavailable. Please wait a moment and try again.';
+  }
+
+  // Network / connectivity errors
+  if (
+    lower.includes('networkerror') ||
+    lower.includes('network error') ||
+    lower.includes('failed to fetch') ||
+    lower.includes('load failed') ||
+    lower.includes('net::err')
+  ) {
+    return 'A network error occurred. Please check your connection and try again.';
+  }
+
+  // Request too large
+  if (
+    status === 413 ||
+    text.includes('413') ||
+    lower.includes('too large') ||
+    lower.includes('payload') ||
+    lower.includes('context length') ||
+    lower.includes('tokens')
+  ) {
+    return 'Your request contains too much data for the AI to process. Try asking a more specific question.';
+  }
+
+  // Generic server error with status code
+  if (status && status >= 500) {
+    return `The AI service returned an error (${status}). Please try again in a moment.`;
+  }
+
+  if (status && status >= 400) {
+    return `The request was rejected by the AI service (${status}). Please try rephrasing your question.`;
+  }
+
+  // Unknown / unclassified — include raw message if short enough to be useful
+  const displayText = text && text.length < 120 ? ` (${text})` : '';
+  return `The AI couldn't respond right now.${displayText} Please try again in a moment.`;
 }
 
 async function askGasAgent() {
