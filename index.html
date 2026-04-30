@@ -170,8 +170,14 @@
 
   /* AI chat tab */
   .chat-card { margin-top:16px; }
-  .chat-window { min-height:320px; max-height:52vh; overflow:auto; display:flex; flex-direction:column; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.08); border-radius:16px; background:rgba(255,255,255,0.55); }
-  .chat-message { max-width:88%; border-radius:16px; padding:10px 12px; line-height:1.35; white-space:pre-wrap; }
+  .chat-window { min-height:320px; max-height:52vh; overflow:auto; display:flex; flex-direction:column; gap:14px; padding:12px; border:1px solid rgba(0,0,0,0.08); border-radius:16px; background:rgba(255,255,255,0.55); }
+  .chat-bubble-wrap { display:flex; flex-direction:column; gap:3px; }
+  .chat-bubble-wrap.user { align-items:flex-end; }
+  .chat-bubble-wrap.assistant { align-items:flex-start; }
+  .chat-bubble-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#888; padding:0 4px; }
+  .chat-bubble-wrap.user .chat-bubble-label { color:#a08800; }
+  .chat-bubble-wrap.assistant .chat-bubble-label { color:#555; }
+  .chat-message { max-width:88%; border-radius:16px; padding:10px 12px; line-height:1.45; white-space:pre-wrap; }
   .chat-message.user { align-self:flex-end; background:#e8c840; color:#171717; }
   .chat-message.assistant { align-self:flex-start; background:rgba(0,0,0,0.055); }
   .chat-message.system { align-self:center; max-width:100%; color:#777; background:transparent; font-size:13px; text-align:center; }
@@ -182,11 +188,15 @@
   .chat-input-row textarea { min-height:58px; resize:vertical; }
   .chat-hints { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
   .chat-hint { border:1px solid rgba(0,0,0,0.08); border-radius:999px; background:rgba(255,255,255,0.72); padding:8px 10px; font:inherit; font-size:13px; cursor:pointer; }
+  .chat-followups { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+  .chat-followup { border:1px solid rgba(232,200,64,0.5); border-radius:999px; background:rgba(232,200,64,0.12); padding:7px 12px; font:inherit; font-size:13px; cursor:pointer; color:#6b5800; transition:background 0.15s; }
+  .chat-followup:hover { background:rgba(232,200,64,0.28); }
   @media (max-width:640px) {
     .tabs { grid-template-columns:repeat(4,minmax(0,1fr)); }
     .tab { padding-left:6px; padding-right:6px; font-size:14px; }
     .chat-input-row { grid-template-columns:1fr; }
     .chat-message { max-width:96%; }
+    .chat-bubble-wrap { max-width:96%; }
   }
 
 </style>
@@ -508,6 +518,7 @@ let calendarMonth = new Date();
 let selectedCalendarDate = "";
 let editingId = null;
 let chatMessages = [];
+let chatFollowUps = [];
 
 function loadLocalEntries() {
   try {
@@ -1617,8 +1628,9 @@ function formatAIContent(content, role = 'assistant') {
     .replace(/__/g, '')
 
     // Convert Gemini bullet separators into line breaks instead of showing dots/bullets.
+    // Preserve the word after the bullet by ensuring a newline (not stripping the space into nothing).
     .replace(/[•●▪◦]\s*/g, '\n')
-    .replace(/(^|\n)\s*[-*]\s+/g, '$1')
+    .replace(/(^|\n)\s*[-*]\s+/g, '$1\n')
 
     // Make section labels start cleanly on their own lines.
     .replace(/\s*(Summary:|Details:|Recommendation:|Recommendations:|Insight:|Insights:|Note:|Savings:|Next steps:)\s*/gi, '\n\n$1\n')
@@ -1650,9 +1662,33 @@ function renderChatMessages() {
     win.innerHTML = '<div class="chat-message system">Try: “Which station is cheapest?” or “How much did I spend by month?”</div>';
     return;
   }
-  win.innerHTML = chatMessages
-    .map(m => `<div class="chat-message ${escapeHtml(m.role)}">${formatAIContent(m.content, m.role)}</div>`)
-    .join('');
+
+  // Find index of last completed assistant message (non-empty, not thinking)
+  let lastAssistantIdx = -1;
+  for (let i = chatMessages.length - 1; i >= 0; i--) {
+    if (chatMessages[i].role === 'assistant' && chatMessages[i].content && chatMessages[i].content !== 'Thinking...') {
+      lastAssistantIdx = i;
+      break;
+    }
+  }
+
+  win.innerHTML = chatMessages.map((m, idx) => {
+    if (m.role === 'system') {
+      return `<div class="chat-message system">${escapeHtml(m.content)}</div>`;
+    }
+    const label = m.role === 'user' ? 'You' : 'AI';
+    const msgHtml = formatAIContent(m.content, m.role);
+    const isLastAssistant = idx === lastAssistantIdx;
+    const followups = (isLastAssistant && chatFollowUps && chatFollowUps.length)
+      ? `<div class="chat-followups">${chatFollowUps.map(q => `<button class="chat-followup" type="button" onclick="useChatHint(${JSON.stringify(q)})">${escapeHtml(q)}</button>`).join('')}</div>`
+      : '';
+    return `<div class="chat-bubble-wrap ${escapeHtml(m.role)}">
+      <div class="chat-bubble-label">${label}</div>
+      <div class="chat-message ${escapeHtml(m.role)}">${msgHtml}</div>
+      ${followups}
+    </div>`;
+  }).join('');
+
   win.scrollTop = win.scrollHeight;
 }
 
@@ -1712,7 +1748,9 @@ function friendlyAIError(error, status = null) {
     text.toLowerCase().includes('rate limit') ||
     text.toLowerCase().includes('high demand')
   ) {
-    return 'The AI is busy right now. Please try again in a little bit.';
+    const retryAt = new Date(Date.now() + 60 * 1000);
+    const retryStr = retryAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `Your AI limit has been reached. Please try again at ${retryStr}.`;
   }
 
   return 'I could not answer that right now. Please try again.';
@@ -1738,6 +1776,7 @@ async function askGasAgent() {
   btn.disabled = true;
   btn.textContent = 'Streaming...';
   msg.textContent = '';
+  chatFollowUps = [];
 
   const assistantMessage = { role: 'assistant', content: '' };
   chatMessages.push(assistantMessage);
@@ -1813,14 +1852,71 @@ async function askGasAgent() {
       }
       renderChatMessages();
     }
+
+    // Generate follow-up suggestions based on the AI response and user question
+    if (assistantMessage.content && assistantMessage.content !== 'Thinking...' && assistantMessage.content !== 'I could not generate an answer.') {
+      generateFollowUps(question, assistantMessage.content).then(() => renderChatMessages());
+    }
+
   } catch (err) {
     console.error('AI chat failed:', err);
     assistantMessage.content = friendlyAIError(err);
+    chatFollowUps = [];
     renderChatMessages();
     msg.textContent = '';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Send';
+  }
+}
+
+async function generateFollowUps(question, answer) {
+  try {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const accessToken = sessionData?.session?.access_token || '';
+
+    const followUpQuestion = `Based on this gas tracking Q&A, suggest exactly 3 short follow-up questions the user might want to ask next. Return ONLY a JSON array of 3 strings, no markdown, no preamble. Keep each question under 8 words.
+
+User asked: ${question}
+AI answered: ${answer.slice(0, 300)}`;
+
+    const response = await fetch(GAS_CHAT_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+      },
+      body: JSON.stringify({
+        question: followUpQuestion,
+        entries: []
+      })
+    });
+
+    if (!response.ok) { chatFollowUps = []; return; }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let raw = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      raw += decoder.decode(value, { stream: true });
+    }
+
+    // Strip any markdown fences and parse
+    const cleaned = raw.replace(/```json|```/gi, '').trim();
+    const match = cleaned.match(/\[[\s\S]*\]/);
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed)) {
+        chatFollowUps = parsed.slice(0, 3).map(s => String(s).trim());
+        return;
+      }
+    }
+    chatFollowUps = [];
+  } catch {
+    chatFollowUps = [];
   }
 }
 
