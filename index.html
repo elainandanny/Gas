@@ -1654,7 +1654,7 @@ async function askGasAgent() {
     appendChat('assistant', data?.answer || 'I could not generate an answer.');
   } catch (err) {
     console.error('AI chat failed:', err);
-    appendChat('assistant', 'I could not reach the secure AI backend. Make sure the Supabase Edge Function named gas-chat is deployed and OPENAI_API_KEY is saved as a Supabase secret.');
+    appendChat('assistant', 'I could not reach the secure AI backend. Make sure the Supabase Edge Function named gas-chat is deployed and GEMINI_API_KEY is saved as a Supabase secret.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Send';
