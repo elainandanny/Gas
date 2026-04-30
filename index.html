@@ -186,6 +186,58 @@
     .chat-message { max-width:96%; }
   }
 
+  /* Dashboard AI-style insights */
+  .insights-grid {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin:14px 0 16px;
+  }
+  .insight-card {
+    border:1px solid rgba(0,0,0,0.08);
+    border-radius:18px;
+    padding:14px;
+    background:rgba(255,255,255,0.72);
+    box-shadow:0 8px 24px rgba(0,0,0,0.04);
+    min-width:0;
+  }
+  .insight-label {
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:#777;
+    margin-bottom:6px;
+  }
+  .insight-value {
+    font-size:18px;
+    font-weight:800;
+    line-height:1.15;
+    overflow-wrap:anywhere;
+  }
+  .insight-sub {
+    color:#777;
+    font-size:13px;
+    margin-top:5px;
+    line-height:1.3;
+  }
+  .station-chip.cheapest {
+    border-color:#2eab6f;
+    box-shadow:0 0 0 2px rgba(46,171,111,0.15) inset;
+  }
+  .station-chip.cheapest::after {
+    content:" Cheapest";
+    font-size:11px;
+    font-weight:800;
+    color:#2eab6f;
+  }
+  @media (max-width:900px) {
+    .insights-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (max-width:640px) {
+    .insights-grid { grid-template-columns:1fr; }
+    .insight-card { padding:12px; }
+  }
+
 </style>
 
 </head>
@@ -268,6 +320,7 @@
       </div>
 
       <div class="metrics" id="metrics-row"></div>
+      <div class="insights-grid" id="dashboard-insights"></div>
       <div class="chart-card">
         <div class="section-title">Total spend over time</div>
         <div class="chart-wrap"><canvas id="chart-spending"></canvas></div>
@@ -483,7 +536,6 @@ const STORAGE_KEY = 'gas-tracker-entries-v5';
 // Supabase Dashboard -> Project Settings -> API
 const SUPABASE_URL = 'https://ykedfxitevfpioplirdy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZWRmeGl0ZXZmcGlvcGxpcmR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjQ4ODIsImV4cCI6MjA5MzA0MDg4Mn0.EmfBzmig_fkITR2Uw5MPxkjvFTzwlevkTzbUCKgwI5o';
-const GAS_CHAT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gas-chat`;
 
 const supabaseReady =
   !SUPABASE_URL.includes('PASTE_') &&
@@ -925,6 +977,7 @@ function renderAll() {
   renderFilters();
   renderHistoryFilterOptions();
   renderMetrics();
+  renderDashboardInsights();
   renderHistory();
   renderCharts();
   renderStationMap();
@@ -1098,6 +1151,188 @@ function renderMetrics() {
     <div class="metric"><div class="metric-label">Avg MPG</div><div class="metric-value">${avgMpg ? avgMpg.toFixed(1) : '-'}</div></div>
   `;
 }
+
+
+function money(value, digits = 2) {
+  return '$' + (Number(value) || 0).toFixed(digits);
+}
+
+function weightedAvgPpg(items) {
+  const gallons = items.reduce((sum, e) => sum + (Number(e.gallons) || 0), 0);
+  if (!gallons) return null;
+  return items.reduce((sum, e) => sum + ((Number(e.ppg) || 0) * (Number(e.gallons) || 0)), 0) / gallons;
+}
+
+function summarizeStations(data) {
+  const map = new Map();
+  data.forEach(e => {
+    const key = e.station || 'Unknown station';
+    if (!map.has(key)) {
+      map.set(key, {
+        station: key,
+        brand: e.brand || '',
+        visits: 0,
+        spend: 0,
+        gallons: 0,
+        ppgWeighted: 0,
+        last_date: '',
+        address: fullAddress(e)
+      });
+    }
+    const item = map.get(key);
+    item.visits += 1;
+    item.spend += Number(e.total) || 0;
+    item.gallons += Number(e.gallons) || 0;
+    item.ppgWeighted += (Number(e.ppg) || 0) * (Number(e.gallons) || 0);
+    if (!item.last_date || String(e.date).localeCompare(item.last_date) > 0) {
+      item.last_date = e.date;
+      item.brand = e.brand || item.brand;
+      item.address = fullAddress(e) || item.address;
+    }
+  });
+  return [...map.values()].map(item => ({
+    ...item,
+    avg_ppg: item.gallons ? item.ppgWeighted / item.gallons : null
+  }));
+}
+
+function summarizeBrands(data) {
+  const map = new Map();
+  data.forEach(e => {
+    const key = e.brand || 'Unknown brand';
+    if (!map.has(key)) map.set(key, { brand: key, visits: 0, spend: 0, gallons: 0, ppgWeighted: 0 });
+    const item = map.get(key);
+    item.visits += 1;
+    item.spend += Number(e.total) || 0;
+    item.gallons += Number(e.gallons) || 0;
+    item.ppgWeighted += (Number(e.ppg) || 0) * (Number(e.gallons) || 0);
+  });
+  return [...map.values()].map(item => ({ ...item, avg_ppg: item.gallons ? item.ppgWeighted / item.gallons : null }));
+}
+
+function computeStructuredGasStats(data = getFilteredEntries()) {
+  const sorted = sortedByDateAsc(data);
+  const stationStats = summarizeStations(data);
+  const brandStats = summarizeBrands(data);
+  const monthly = new Map();
+  data.forEach(e => {
+    const key = monthKey(e.date);
+    if (!monthly.has(key)) monthly.set(key, { month: key, spend: 0, gallons: 0, fillups: 0 });
+    const item = monthly.get(key);
+    item.spend += Number(e.total) || 0;
+    item.gallons += Number(e.gallons) || 0;
+    item.fillups += 1;
+  });
+  const monthlySpend = [...monthly.values()].sort((a, b) => a.month.localeCompare(b.month));
+  const mpgValues = calculateMpgSeries(data).map(item => item.mpg).filter(v => Number.isFinite(v));
+  const cheapestStation = stationStats
+    .filter(s => Number.isFinite(Number(s.avg_ppg)))
+    .sort((a, b) => a.avg_ppg - b.avg_ppg || b.visits - a.visits)[0] || null;
+  const mostVisitedStation = [...stationStats].sort((a, b) => b.visits - a.visits || b.spend - a.spend)[0] || null;
+  const cheapestBrand = brandStats
+    .filter(b => Number.isFinite(Number(b.avg_ppg)))
+    .sort((a, b) => a.avg_ppg - b.avg_ppg || b.visits - a.visits)[0] || null;
+
+  return {
+    period: {
+      start_date: sorted[0]?.date || null,
+      end_date: sorted[sorted.length - 1]?.date || null
+    },
+    total_fillups: data.length,
+    total_spend: Number(data.reduce((sum, e) => sum + (Number(e.total) || 0), 0).toFixed(2)),
+    total_gallons: Number(data.reduce((sum, e) => sum + (Number(e.gallons) || 0), 0).toFixed(3)),
+    average_price_per_gallon: Number((weightedAvgPpg(data) || 0).toFixed(3)),
+    average_mpg: mpgValues.length ? Number((mpgValues.reduce((sum, v) => sum + v, 0) / mpgValues.length).toFixed(1)) : null,
+    cheapest_station: cheapestStation ? {
+      station: cheapestStation.station,
+      brand: cheapestStation.brand,
+      average_price_per_gallon: Number(cheapestStation.avg_ppg.toFixed(3)),
+      visits: cheapestStation.visits,
+      total_spend: Number(cheapestStation.spend.toFixed(2)),
+      last_date: cheapestStation.last_date
+    } : null,
+    cheapest_brand: cheapestBrand ? {
+      brand: cheapestBrand.brand,
+      average_price_per_gallon: Number(cheapestBrand.avg_ppg.toFixed(3)),
+      visits: cheapestBrand.visits,
+      total_spend: Number(cheapestBrand.spend.toFixed(2))
+    } : null,
+    most_visited_station: mostVisitedStation ? {
+      station: mostVisitedStation.station,
+      brand: mostVisitedStation.brand,
+      visits: mostVisitedStation.visits,
+      total_spend: Number(mostVisitedStation.spend.toFixed(2)),
+      last_date: mostVisitedStation.last_date
+    } : null,
+    monthly_spend: monthlySpend.map(m => ({
+      month: m.month,
+      spend: Number(m.spend.toFixed(2)),
+      gallons: Number(m.gallons.toFixed(3)),
+      fillups: m.fillups
+    })),
+    station_stats: stationStats.map(s => ({
+      station: s.station,
+      brand: s.brand,
+      visits: s.visits,
+      total_spend: Number(s.spend.toFixed(2)),
+      average_price_per_gallon: s.avg_ppg === null ? null : Number(s.avg_ppg.toFixed(3)),
+      last_date: s.last_date
+    })),
+    brand_stats: brandStats.map(b => ({
+      brand: b.brand,
+      visits: b.visits,
+      total_spend: Number(b.spend.toFixed(2)),
+      average_price_per_gallon: b.avg_ppg === null ? null : Number(b.avg_ppg.toFixed(3))
+    }))
+  };
+}
+
+function renderDashboardInsights() {
+  const el = document.getElementById('dashboard-insights');
+  if (!el) return;
+  const data = getFilteredEntries();
+  if (!data.length) {
+    el.innerHTML = '';
+    return;
+  }
+
+  const stats = computeStructuredGasStats(data);
+  const monthly = stats.monthly_spend || [];
+  const lastMonth = monthly[monthly.length - 1] || null;
+  const previousMonth = monthly[monthly.length - 2] || null;
+  const monthDelta = lastMonth && previousMonth ? lastMonth.spend - previousMonth.spend : null;
+  const deltaText = monthDelta === null
+    ? 'Add another month to compare trend'
+    : `${monthDelta >= 0 ? '+' : '-'}${money(Math.abs(monthDelta))} vs prior month`;
+
+  const cheapest = stats.cheapest_station;
+  const mostVisited = stats.most_visited_station;
+  const cheapestBrand = stats.cheapest_brand;
+
+  el.innerHTML = `
+    <div class="insight-card">
+      <div class="insight-label">Cheapest station</div>
+      <div class="insight-value">${cheapest ? escapeHtml(cheapest.station) : '-'}</div>
+      <div class="insight-sub">${cheapest ? `${escapeHtml(cheapest.brand)} · ${money(cheapest.average_price_per_gallon, 3)}/gal · ${cheapest.visits} visit${cheapest.visits === 1 ? '' : 's'}` : 'No station data yet'}</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">Cheapest brand</div>
+      <div class="insight-value">${cheapestBrand ? escapeHtml(cheapestBrand.brand) : '-'}</div>
+      <div class="insight-sub">${cheapestBrand ? `${money(cheapestBrand.average_price_per_gallon, 3)}/gal · ${cheapestBrand.visits} fill-up${cheapestBrand.visits === 1 ? '' : 's'}` : 'No brand data yet'}</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">Most visited</div>
+      <div class="insight-value">${mostVisited ? escapeHtml(mostVisited.station) : '-'}</div>
+      <div class="insight-sub">${mostVisited ? `${mostVisited.visits} visit${mostVisited.visits === 1 ? '' : 's'} · ${money(mostVisited.total_spend)} spent` : 'No visits yet'}</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">Latest monthly trend</div>
+      <div class="insight-value">${lastMonth ? `${monthLabel(lastMonth.month)}: ${money(lastMonth.spend)}` : '-'}</div>
+      <div class="insight-sub">${escapeHtml(deltaText)}</div>
+    </div>
+  `;
+}
+
 
 function renderHistoryFilterOptions() {
   const brandEl = document.getElementById('history-brand');
@@ -1328,6 +1563,11 @@ function renderStationMap() {
     }
   });
 
+  const cheapestForMap = summarizeStations(mapData)
+    .filter(s => Number.isFinite(Number(s.avg_ppg)))
+    .sort((a, b) => a.avg_ppg - b.avg_ppg || b.visits - a.visits)[0] || null;
+  if (!selectedMapStation && cheapestForMap) selectedMapStation = cheapestForMap.station;
+
   const selected = uniqueStations.find(e => e.station === selectedMapStation) || uniqueStations[0];
   selectedMapStation = selected.station;
   stationSelect.value = selectedMapStation;
@@ -1348,7 +1588,7 @@ function renderStationMap() {
   }
 
   list.innerHTML = uniqueStations.map(e => `
-    <button class="station-chip ${e.station === selectedMapStation ? 'active' : ''}" type="button" onclick="setMapStation('${escapeJs(e.station)}')">
+    <button class="station-chip ${e.station === selectedMapStation ? 'active' : ''} ${cheapestForMap && e.station === cheapestForMap.station ? 'cheapest' : ''}" type="button" onclick="setMapStation('${escapeJs(e.station)}')">
       ${escapeHtml(e.station || e.brand || 'Station')}
     </button>
   `).join('');
@@ -1626,14 +1866,30 @@ function compactEntriesForAI() {
   }));
 }
 
+
+function formatStructuredStatsForChat(stats) {
+  if (!stats || typeof stats !== 'object') return '';
+  const lines = [];
+  if (typeof stats.total_spend !== 'undefined') lines.push(`Total spend: ${money(stats.total_spend)}`);
+  if (typeof stats.total_fillups !== 'undefined') lines.push(`Fill-ups: ${stats.total_fillups}`);
+  if (typeof stats.average_price_per_gallon !== 'undefined') lines.push(`Avg price/gal: ${money(stats.average_price_per_gallon, 3)}`);
+  if (stats.cheapest_station?.station) {
+    lines.push(`Cheapest station: ${stats.cheapest_station.station} (${money(stats.cheapest_station.average_price_per_gallon, 3)}/gal)`);
+  }
+  if (stats.most_visited_station?.station) {
+    lines.push(`Most visited: ${stats.most_visited_station.station} (${stats.most_visited_station.visits} visits)`);
+  }
+  if (stats.average_mpg) lines.push(`Avg MPG: ${stats.average_mpg}`);
+  return lines.length ? '\n\nStructured stats:\n' + lines.map(line => `• ${line}`).join('\n') : '';
+}
+
+
 async function askGasAgent() {
   const input = document.getElementById('chat-question');
   const btn = document.getElementById('chat-send-btn');
   const msg = document.getElementById('chat-msg');
   const question = (input?.value || '').trim();
-
   if (!question) return;
-
   if (!currentUser || !supabaseClient) {
     msg.textContent = 'Log in first so the chat can securely use your gas data.';
     msg.style.color = 'var(--danger)';
@@ -1647,17 +1903,13 @@ async function askGasAgent() {
   msg.textContent = '';
 
   try {
-    const { data: sessionData } = await supabaseClient.auth.getSession();
-    const accessToken = sessionData?.session?.access_token || '';
-
     const recentMessages = chatMessages
       .slice(-8)
-      .map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content
-      }));
+      .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
 
-    const response = await fetch(GAS_CHAT_FUNCTION_URL, {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/gas-chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1667,23 +1919,21 @@ async function askGasAgent() {
       body: JSON.stringify({
         question,
         messages: recentMessages,
-        entries: compactEntriesForAI()
+        entries: compactEntriesForAI(),
+        stats: computeStructuredGasStats(getFilteredEntries())
       })
     });
 
     const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      const backendMessage = data?.error || data?.message || `Request failed with status ${response.status}`;
-      throw new Error(backendMessage);
+    if (!response.ok || data?.error) {
+      throw new Error(data?.error || data?.details?.error?.message || `Backend returned ${response.status}`);
     }
 
-    appendChat('assistant', data?.answer || 'I could not generate an answer.');
+    const answer = data?.answer || 'I could not generate an answer.';
+    appendChat('assistant', answer + formatStructuredStatsForChat(data?.stats));
   } catch (err) {
     console.error('AI chat failed:', err);
-    appendChat('assistant', `AI chat error: ${err?.message || 'Unknown error'}`);
-    msg.textContent = 'AI chat failed. Check the Supabase gas-chat function logs for details.';
-    msg.style.color = 'var(--danger)';
+    appendChat('assistant', 'AI chat error: ' + (err?.message || String(err)));
   } finally {
     btn.disabled = false;
     btn.textContent = 'Send';
